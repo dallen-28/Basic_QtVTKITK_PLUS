@@ -89,6 +89,7 @@ class vtkPlusChannel;
 class vtkPlusTransformRepository;
 class PlusTrackedFrame;
 class PlusTransformName;
+class vtkPlusProbeCalibrationAlgo;
 
 class QComboBox;
 class QProcess;
@@ -136,13 +137,7 @@ public:
 
     /* Connect to devices described in the argument configuration file in response by clicking on the Connect button
     param aConfigFile DeviceSet configuration file path and name */
-
     void ConnectToDevicesByConfigFile(std::string);
-    bool LocalStartServer(std::string);
-
-    void ErrorReceieved(QProcess::ProcessError);
-
-    void ServerExecutableFinished(int, QProcess::ExitStatus);
 
     public slots:
 
@@ -171,12 +166,6 @@ protected:
     /*! Device set selector widget */
     QPlusDeviceSetSelectorWidget*         m_DeviceSetSelectorWidget;
 
-    /*! PlusServer instance that is responsible for all data collection and network transfer */
-    std::map<std::string, QProcess*>      m_ServerInstances;
-
-    /*! List of active ports for PlusServers */
-    std::string                           m_Suffix;
-
     /*! Store local config file name */
     std::string                           m_LocalConfigFile;
 
@@ -204,6 +193,8 @@ private:
 
     // VTK Objects
     vtkSmartPointer<vtkActor>                           actor;
+    vtkSmartPointer<vtkActor>                           actor2;
+
     vtkSmartPointer<vtkActor>                           stylusActor;
     vtkSmartPointer<vtkVolume>                          volume;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow>       renWin;
@@ -219,17 +210,24 @@ private:
     /*!
     * Tracker related objects.
     */
-    //vtkSmartPointer< vtkNDITracker >                    myTracker;
     vtkPlusNDITracker                                   *myTracker;
     vtkPlusDevice                                       *trackerDevice;
-
     vtkSmartPointer<vtkPlusDataCollector>               dataCollector;
     vtkSmartPointer<vtkPlusTransformRepository>         transformRepository;
     vtkPlusChannel                                      *trackerChannel;
     PlusTrackedFrame                                    trackerFrame;
     PlusTransformName                                   stylusToTrackerName;
-    vtkSmartPointer<vtkMatrix4x4>                       stylusToTracker;
+    PlusTransformName                                   referenceToTrackerName;
+    PlusTransformName                                   stylusTipToReferenceName;
+    PlusTransformName                                   stylusTipToTrackerName;
 
+    // Transforms
+    vtkSmartPointer<vtkMatrix4x4>                       stylusToTracker;
+    vtkSmartPointer<vtkMatrix4x4>                       referenceToTracker;       
+    vtkSmartPointer<vtkMatrix4x4>                       stylusTipToReference;
+    vtkSmartPointer<vtkMatrix4x4>                       stylusTipToTracker;
+
+    vtkSmartPointer<vtkPlusProbeCalibrationAlgo>        calibration;
 
     std::vector< trackedObjectTypes >                   trackedObjects;
     std::vector< vtkTrackerTool* >                      tools;

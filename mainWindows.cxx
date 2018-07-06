@@ -97,6 +97,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <vtkTubeFilter.h>
 #include <vtkWindowToImageFilter.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkSphereSource.h>
 
 // ITK includes
 #include <itkEuler3DTransform.h>
@@ -113,6 +114,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <vtkPlusOpticalMarkerTracker.h>
 #include <PlusXmlUtils.h>
 #include <vtkPlusDataSource.h>
+#include <vtkPlusProbeCalibrationAlgo.h>
 
 // system
 #include <chrono>
@@ -231,7 +233,22 @@ basic_QtVTK::basic_QtVTK()
 
 void basic_QtVTK::createVTKObjects()
 {
+
+
     actor = vtkSmartPointer<vtkActor>::New();
+    actor2 = vtkSmartPointer<vtkActor>::New();
+
+    vtkSphereSource *cone = vtkSphereSource::New();
+    vtkSphereSource *cone2 = vtkSphereSource::New();
+
+    vtkPolyDataMapper *mapper = vtkPolyDataMapper::New();
+    vtkPolyDataMapper *mapper2 = vtkPolyDataMapper::New();
+
+    mapper->SetInputConnection(cone->GetOutputPort());
+    mapper2->SetInputConnection(cone2->GetOutputPort());
+    actor->SetMapper(mapper);
+    actor2->SetMapper(mapper2);
+
     volume = vtkSmartPointer<vtkVolume>::New();
     //myTracker = vtkSmartPointer< vtkNDITracker >::New();
     myTracker = vtkSmartPointer< vtkPlusNDITracker >::New();
@@ -249,7 +266,17 @@ void basic_QtVTK::createVTKObjects()
     
     dataCollector = vtkSmartPointer<vtkPlusDataCollector>::New();
     transformRepository = vtkSmartPointer<vtkPlusTransformRepository>::New();
+
+    // Initialize Transforms
     stylusToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    referenceToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    stylusTipToReference = vtkSmartPointer<vtkMatrix4x4>::New();
+    stylusTipToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    calibration = vtkSmartPointer<vtkPlusProbeCalibrationAlgo>::New();
+    
+    
+    //ren->AddActor(actor);
+    //ren->AddActor(actor2);
 }
 
 
@@ -316,16 +343,11 @@ void basic_QtVTK::setupQTObjects()
     verticalLayout_4->addWidget(m_DeviceSetSelectorWidget);
 
     connect(m_DeviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
-    
-    
-    
-
 }
 
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
     qDebug() << "Connect using configuration file: " << aConfigFile.c_str();
-    //LocalStartServer(aConfigFile);
 
     configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
 
@@ -338,8 +360,6 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 
     vtkPlusConfig::GetInstance()->SetDeviceSetConfigurationData(configRootElement);
 
-
-    // Read configuration file
     if (dataCollector->ReadConfiguration(configRootElement) != PLUS_SUCCESS)
     {
         LOG_ERROR("Configuration incorrect for vtkPlusDataCollector.");
@@ -347,57 +367,9 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
     }
 
     stylusToTrackerName.SetTransformName("StylusToTracker");
-
-    // Read Config
-    //configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
-    //vtkPlusConfig::GetInstance()->SetDeviceSetConfigurationData(configRootElement);
-    //DeviceCollection aCollection;
-
-    /*if (this->parent->GetVisualizationController()->GetDataCollector()->GetDevices(aCollection) != PLUS_SUCCESS)
-    {
-        LOG_ERROR("Unable to load the list of devices.");
-        return;
-    }*/
-
-}
-
-// Start a new instance of PlusServer with aConfigFile as a parameter
-bool basic_QtVTK::LocalStartServer(std::string aConfigFile)
-{
-    QProcess *newServerProcess = new QProcess();
-    //std::string plusServerExecutable = vtkPlusConfig::GetInstance()->GetPlusExecutablePath("PlusServer");
-    std::string plusServerExecutable = "C:\\d\\pb\\bin\\Debug\\PlusServer.exe";
-    std::string plusServerLocation = vtksys::SystemTools::GetFilenamePath(plusServerExecutable);
-
-    //connect(newServerProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(ErrorReceived(QProcess::ProcessError)));
-    //connect(newServerProcess, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ServerExecutableFinished(int, QProcess::ExitStatus)));
-
-    int logLevelToPlusServer = vtkPlusLogger::LOG_LEVEL_TRACE;
-
-    QString cmdLine = QString("\"%1\" --config-file=\"%2\" --verbose=%3").arg(plusServerExecutable.c_str()).arg(QString::fromStdString(aConfigFile)).arg(logLevelToPlusServer);
-    LOG_INFO("Server process command line: " << cmdLine.toLatin1().constData());
-    newServerProcess->start(cmdLine);
-    newServerProcess->waitForFinished(500);
-
-    // During waitForFinished an error signal may be emitted, which may delete m_CurrentServerInstance,
-    // therefore we need to check if m_CurrentServerInstance is still not NULL
-    if (newServerProcess && newServerProcess->state() == QProcess::Running)
-    {
-        LOG_INFO("Server process started successfully");
-        return true;
-    }
-    else
-    {
-        LOG_ERROR("Failed to start server process");
-        return false;
-    }
-
-}
-void basic_QtVTK::ErrorReceieved(QProcess::ProcessError errorCode)
-{
-}
-void basic_QtVTK::ServerExecutableFinished(int i, QProcess::ExitStatus exit)
-{
+    referenceToTrackerName.SetTransformName("ReferenceToTracker");
+    stylusTipToReferenceName.SetTransformName("StylusTipToReference");
+    stylusTipToTrackerName.SetTransformName("StylusTipToTracker");
 }
 
 
@@ -434,7 +406,7 @@ void basic_QtVTK::startTracker(bool checked)
 
             if (myTracker == NULL)
             {
-                LOG_ERROR("Tracking device is not NDI Polaris/Aurora. Could not connect.");
+                LOG_ERROR("Tracking device is not NDI Polaris. Could not connect.");
                 exit(EXIT_FAILURE);
             }
 
@@ -480,6 +452,7 @@ void basic_QtVTK::startTracker(bool checked)
     trackerTimer = new QTimer(this);
     connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
     trackerTimer->start(0);
+  
 }
 
 
@@ -487,20 +460,12 @@ void basic_QtVTK::updateTrackerInfo()
 {
     if (isTrackerInitialized)
     {
-        //myTracker->Update();
         trackerChannel->GetTrackedFrame(trackerFrame);
         transformRepository->SetTransforms(trackerFrame);
         
-        bool isProbeMatrixValid = true;
-
-        //myTracker->Update();
-        // Check if probe is visible
-
-        stylusToTracker->Identity();
-
-        
-
-        if (transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isProbeMatrixValid) == PLUS_SUCCESS)
+        bool isProbeMatrixValid = false;
+        // Check if probe is visible  
+        if (transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isProbeMatrixValid) == PLUS_SUCCESS && isProbeMatrixValid)
         {
             // connected and withing good tracking accuracy. shown in green
             trackerDrawing->SetDrawColor(0, 255, 0);
@@ -508,9 +473,24 @@ void basic_QtVTK::updateTrackerInfo()
         }
         else
         {
-            trackerDrawing->SetDrawColor(0, 0, 255);
+            trackerDrawing->SetDrawColor(255, 0, 0);
             trackerDrawing->FillBox(1, 16, 1, 11);
         }
+
+        bool isReferenceMatrixValid = false;
+        // Check if reference is visible
+        if (transformRepository->GetTransform(referenceToTrackerName, referenceToTracker, &isReferenceMatrixValid) == PLUS_SUCCESS && isReferenceMatrixValid)
+        {
+            // connected and withing good tracking accuracy. shown in green
+            trackerDrawing->SetDrawColor(0, 255, 0);
+            trackerDrawing->FillBox(17, 33, 1, 11);
+        }
+        else
+        {
+            trackerDrawing->SetDrawColor(255, 0, 0);
+            trackerDrawing->FillBox(17, 33, 1, 11);
+        }
+
         //this->volume->SetUserMatrix(stylusToTracker);
 
 
@@ -541,7 +521,30 @@ void basic_QtVTK::updateTrackerInfo()
                 trackerDrawing->FillBox(logoWidgetX*i + i + 1, logoWidgetX*(i + 1) + i, 1, logoWidgetY + 1);
             }
         }*/
-        //this->setCameraUsingTracker();
+
+        bool isValid = false;
+        transformRepository->GetTransform(stylusTipToTrackerName, stylusTipToTracker, &isValid);
+
+        this->setCameraUsingTracker();
+
+        vtkSmartPointer<vtkTransform> refTransform = vtkSmartPointer<vtkTransform>::New();
+        refTransform->SetMatrix(referenceToTracker);
+
+        phantomTransform->Identity();
+        phantomTransform->PostMultiply();
+        phantomTransform->Concatenate(phantomRegTransform->GetMatrix());
+        phantomTransform->Concatenate(refTransform);
+        volume->SetUserTransform(phantomTransform);
+
+        //this->actor->SetUserMatrix(stylusTipToReference);
+        //vtkSmartPointer<vtkTransform> tran = vtkSmartPointer<vtkTransform>::New();
+
+        //stylusActor->SetUserTransform(tools[toolIdx]->GetTransform());
+        //tran->SetMatrix(stylusToTracker);
+        //stylusActor->SetUserTransform(tran);
+
+        //volume->SetUserMatrix(referenceToTracker);
+
         trackerDrawing->Update();
         this->openGLWidget->GetRenderWindow()->Render();
 
@@ -660,16 +663,10 @@ void basic_QtVTK::loadMesh()
     {
         // do something only if we know the file type
         vtkNew<vtkPolyDataMapper> mapper;
-        vtkNew<vtkSmartVolumeMapper> mapper1;
-        //vtkNew<vtkVolume> volume;
+        vtkNew<vtkSmartVolumeMapper> volumeMapper;
         vtkNew<vtkVolumeProperty> property;
         vtkNew<vtkColorTransferFunction> colorFun;
         vtkNew<vtkPiecewiseFunction> opacityFun;
-
-        /*colorFun->AddRGBSegment(0.0, 1.0, 1.0, 1.0, 255.0, 1.0, 1.0, 1.0);
-        opacityFun->AddSegment(2048 - 0.5*4096, 0.0,
-        2048 + 0.5*4096, 1.0);
-        mapper1->SetBlendModeToMaximumIntensity();*/
 
         property->SetColor(colorFun);
         property->SetScalarOpacity(opacityFun);
@@ -685,7 +682,7 @@ void basic_QtVTK::loadMesh()
         opacityFun->AddPoint(641, .72, .5, 0.0);
         opacityFun->AddPoint(3071, .71, 0.5, 0.0);
 
-        mapper1->SetBlendModeToComposite();
+        volumeMapper->SetBlendModeToComposite();
         property->ShadeOn();
         property->SetAmbient(0.1);
         property->SetDiffuse(0.9);
@@ -693,65 +690,14 @@ void basic_QtVTK::loadMesh()
         property->SetSpecularPower(10.0);
         property->SetScalarOpacityUnitDistance(0.8919);
 
-        vtkNew<vtkConeSource> cone;
-        vtkNew<vtkCylinderSource> cylinderx;
-        vtkNew<vtkCylinderSource> cylindery;
-        vtkNew<vtkCylinderSource> cylinderz;
-
-
-        cylinderx->SetHeight(1000);
-        cylinderx->SetRadius(100);
-        cylindery->SetHeight(1000);
-        cylinderz->SetHeight(1000);
-
-        vtkNew<vtkPolyDataMapper>  mapper2;
-        vtkNew<vtkPolyDataMapper>  mapper3;
-        vtkNew<vtkPolyDataMapper>  mapper4;
-        vtkNew<vtkActor> cylinderActorx;
-        vtkNew<vtkActor> cylinderActory;
-        vtkNew<vtkActor> cylinderActorz;
-
-        mapper2->SetInputConnection(cylinderx->GetOutputPort());
-        mapper3->SetInputConnection(cylindery->GetOutputPort());
-        mapper4->SetInputConnection(cylinderz->GetOutputPort());
-
-        cylinderActorx->SetMapper(mapper2);
-        cylinderActory->SetMapper(mapper3);
-        cylinderActorz->SetMapper(mapper4);
-
-
         if (info.suffix() == QString(tr("mha")))
         {
-            mapper1->SetInputConnection(reader->GetOutputPort());
+            volumeMapper->SetInputConnection(reader->GetOutputPort());
 
-            volume->SetMapper(mapper1);
+            volume->SetMapper(volumeMapper);
             volume->SetProperty(property);
             ren->AddVolume(volume);
-            //ren2->AddVolume(volume);
             ren2->AddActor(this->fluoroImage->ExportToVTK());
-            //ren2->AddActor(cylinderActorx);
-            //ren->AddActor(cylinderActorx);
-            //ren->AddActor(cylinderActory);
-            //ren->AddActor(cylinderActorz);
-            cylinderActorx->SetPosition(0, 0, 0);
-            cylinderActory->SetPosition(0, 0, 0);
-            cylinderActorz->SetPosition(0, 0, 0);
-            cylinderActorx->SetOrientation(90, 0, 0);
-            cylinderActory->SetOrientation(0, 90, 0);
-            cylinderActorz->SetOrientation(0, 0, 90);
-
-            //volume->SetPosition(0, 0, -220);
-            //volume->SetPosition(0, 0, -5000);
-            volume->SetOrigin(0, 0, -174);
-            this->ren->GetActiveCamera()->SetPosition(0, 0, 700);
-
-            volume->SetOrientation(0, 180, 180);
-            //volume->SetOrientation(0, 0, 0);
-
-            //this->ren->GetActiveCamera()->SetPosition(0, 0, -500);
-
-            //volume->SetPosition(0.0000610352, 23.3001, -574);
-            //volume->SetPosition(-195, -171.7, -347.75);
         }
         
         else
@@ -792,7 +738,8 @@ void basic_QtVTK::stylusCalibration(bool checked)
 
     // make sure the tracker is initialized/found first.
     if (isTrackerInitialized)
-    {
+    {      
+
         // find out which port is the stylus
         int stylusPort = -1;
         int toolIdx = -1;
@@ -960,7 +907,24 @@ void basic_QtVTK::createLinearZStylusActor()
         }
     }
 
-    vtkMatrix4x4 *calibMatrix = tools[toolIdx]->GetCalibrationMatrix();
+    trackerChannel->GetTrackedFrame(trackerFrame);
+    transformRepository->SetTransforms(trackerFrame);
+
+
+    PlusTransformName name;
+    name.SetTransformName("StylusTipToStylus");
+
+    vtkSmartPointer<vtkMatrix4x4> matr = vtkSmartPointer<vtkMatrix4x4>::New();
+
+
+    bool isProbeMatrixValid = false;
+    // Check if probe is visible  
+    transformRepository->GetTransform(name, matr, &isProbeMatrixValid);
+
+
+
+    //vtkMatrix4x4 *calibMatrix = tools[toolIdx]->GetCalibrationMatrix();
+    vtkMatrix4x4 *calibMatrix = matr;
 
     double *pos, *outpt;
     pos = new double[4];
@@ -1001,7 +965,17 @@ void basic_QtVTK::createLinearZStylusActor()
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(append->GetOutputPort());
     stylusActor->SetMapper(mapper);
-    stylusActor->SetUserTransform(tools[toolIdx]->GetTransform());
+
+    vtkSmartPointer<vtkTransform> tran = vtkSmartPointer<vtkTransform>::New();
+
+    //stylusActor->SetUserTransform(tools[toolIdx]->GetTransform());
+
+    bool isValid = false;
+    transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isValid);
+
+    tran->SetMatrix(stylusToTracker);
+
+    stylusActor->SetUserTransform(tran);
 
     vtkNew<vtkNamedColors> color;
     stylusActor->GetProperty()->SetColor(color->GetColor3d("zinc_white").GetRed(),
@@ -1082,21 +1056,28 @@ void basic_QtVTK::collectDRR()
 */
 void basic_QtVTK::collectSinglePointPhantom()
 {
-    if (isStylusCalibrated) /*!< Make sure the stylus is calibrated first */
+    if (1) /*!< Make sure the stylus is calibrated first */
     {
         if (myTracker->IsRecording()) /*!< Make sure the traker is tracking */
         {
             if (1 /*tools[0]->IsOutOfView == 0 && tools[1]->IsOutOfView == 0*/)  /*! make sure both items are visible */
             {
                 vtkNew<vtkTransform> transform;
+                
+                vtkNew<vtkTransform> stylusTransform;
+                vtkNew<vtkTransform> refTransform;
+                stylusTransform->SetMatrix(stylusTipToTracker);
+                refTransform->SetMatrix(referenceToTracker);
+
                 transform->PostMultiply();
                 transform->Identity();
-                transform->Concatenate(tools[0]->GetTransform());
-                transform->Concatenate(tools[1]->GetTransform()->GetLinearInverse());
+                transform->Concatenate(stylusTransform);
+                transform->Concatenate(phantomTransform);
                 transform->Update();
 
                 double pos[3];
                 transform->GetPosition(pos);
+                std::cout << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
                 targetPoints->InsertNextPoint(pos[0], pos[1], pos[2]);
                 targetPoints->Modified();
                 numCollected->display((int)targetPoints->GetNumberOfPoints());
@@ -1138,6 +1119,9 @@ void basic_QtVTK::performPhantomRegistration()
 {
     qDebug() << "register";
 
+    vtkNew<vtkTransform> refTransform;
+    refTransform->SetMatrix(referenceToTracker);
+
     phantomRegTransform->SetTargetLandmarks(targetPoints);
     phantomRegTransform->SetSourceLandmarks(fiducialPts);
     phantomRegTransform->SetModeToRigidBody();
@@ -1148,7 +1132,7 @@ void basic_QtVTK::performPhantomRegistration()
     phantomTransform->Identity();
     phantomTransform->PostMultiply();
     phantomTransform->Concatenate(phantomRegTransform->GetMatrix());
-    phantomTransform->Concatenate(tools[1]->GetTransform());
+    phantomTransform->Concatenate(refTransform);
     volume->SetUserTransform(phantomTransform);
     //actor->SetUserTransform(phantomTransform);
 
@@ -1167,10 +1151,13 @@ void basic_QtVTK::setCameraUsingTracker()
 
     double outDir[4], pos[4], updir[4], phantomOrig[4];
 
-    this->tools[0]->GetTransform()->MultiplyPoint(zdir, outDir);
-    this->tools[0]->GetTransform()->MultiplyPoint(orig, pos);
-    this->tools[0]->GetTransform()->MultiplyPoint(up, updir);
-    this->tools[1]->GetTransform()->MultiplyPoint(orig, phantomOrig);
+    vtkSmartPointer<vtkTransform> tran = vtkSmartPointer<vtkTransform>::New();
+    tran->SetMatrix(stylusTipToTracker);
+
+    tran->MultiplyPoint(zdir, outDir);
+    tran->MultiplyPoint(orig, pos);
+    tran->MultiplyPoint(up, updir);
+    tran->MultiplyPoint(orig, phantomOrig);
 
     //this->volume->SetUserTransform(this->tools[1]->GetTransform());
 

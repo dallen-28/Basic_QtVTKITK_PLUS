@@ -53,6 +53,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include "ui_basic_QtVTK_AIGS.h"
 #include "PlusConfigure.h"
 #include "ITKFluoroImage.h"
+#include "PlusTrackedFrame.h"
 
 // C++ includes
 #include <tuple>
@@ -83,6 +84,11 @@ class vtkMatrix4x4;
 
 class vtkPlusNDITracker;
 class vtkPlusTracker;
+class vtkPlusDevice;
+class vtkPlusChannel;
+class vtkPlusTransformRepository;
+class PlusTrackedFrame;
+class PlusTransformName;
 
 class QComboBox;
 class QProcess;
@@ -214,8 +220,17 @@ private:
     * Tracker related objects.
     */
     //vtkSmartPointer< vtkNDITracker >                    myTracker;
-    vtkSmartPointer< vtkPlusNDITracker>                 myTracker;
+    vtkPlusNDITracker                                   *myTracker;
+    vtkPlusDevice                                       *trackerDevice;
+
     vtkSmartPointer<vtkPlusDataCollector>               dataCollector;
+    vtkSmartPointer<vtkPlusTransformRepository>         transformRepository;
+    vtkPlusChannel                                      *trackerChannel;
+    PlusTrackedFrame                                    trackerFrame;
+    PlusTransformName                                   stylusToTrackerName;
+    vtkSmartPointer<vtkMatrix4x4>                       stylusToTracker;
+
+
     std::vector< trackedObjectTypes >                   trackedObjects;
     std::vector< vtkTrackerTool* >                      tools;
     //std::vector< vtkPlusDataSource* >                   tools;

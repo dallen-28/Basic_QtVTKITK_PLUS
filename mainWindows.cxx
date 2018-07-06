@@ -247,7 +247,9 @@ void basic_QtVTK::createVTKObjects()
     trackerLogoRepresentation = vtkSmartPointer<vtkLogoRepresentation>::New();
     trackerLogoWidget = vtkSmartPointer<vtkLogoWidget>::New();
     
-    dataCollector - vtkSmartPointer<vtkPlusDataCollector>::New();
+    dataCollector = vtkSmartPointer<vtkPlusDataCollector>::New();
+    transformRepository = vtkSmartPointer<vtkPlusTransformRepository>::New();
+    stylusToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
 }
 
 
@@ -299,19 +301,19 @@ void basic_QtVTK::setupQTObjects()
 
     QPlusStatusIcon* statusIcon = new QPlusStatusIcon(NULL);
     statusIcon->SetMaxMessageCount(3000);
-    //statusbar->insertWidget(0, statusIcon);
+    statusbar->insertWidget(0, statusIcon);
 
     vtkPlusNDITracker *tracker = vtkPlusNDITracker::New();
 
 
     // QPlusDeviceSetSelectorWidget
     m_DeviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
-    //m_DeviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
-    //m_DeviceSetSelectorWidget->SetConnectButtonText("Launch Server");
+    m_DeviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
+    m_DeviceSetSelectorWidget->SetConnectButtonText("Launch Server");
     m_DeviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
     m_DeviceSetSelectorWidget->setMaximumWidth(200);
 
-    //fverticalLayout_4->addWidget(m_DeviceSetSelectorWidget);
+    verticalLayout_4->addWidget(m_DeviceSetSelectorWidget);
 
     connect(m_DeviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
     
@@ -323,7 +325,7 @@ void basic_QtVTK::setupQTObjects()
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
     qDebug() << "Connect using configuration file: " << aConfigFile.c_str();
-    LocalStartServer(aConfigFile);
+    //LocalStartServer(aConfigFile);
 
     configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
 
@@ -338,18 +340,13 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 
 
     // Read configuration file
-    vtkXMLDataElement *element = vtkPlusConfig::GetInstance()->GetDeviceSetConfigurationData();
-    if (this->myTracker->ReadConfiguration(element) != PLUS_SUCCESS)
-    {
-        LOG_ERROR("Configuration incorrect for vtkPlusDataCollector.");
-        exit;
-    }  
-
-    if (dataCollector->ReadConfiguration(element) != PLUS_SUCCESS)
+    if (dataCollector->ReadConfiguration(configRootElement) != PLUS_SUCCESS)
     {
         LOG_ERROR("Configuration incorrect for vtkPlusDataCollector.");
         exit;
     }
+
+    stylusToTrackerName.SetTransformName("StylusToTracker");
 
     // Read Config
     //configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
@@ -410,8 +407,8 @@ void basic_QtVTK::startTracker(bool checked)
 {
     if (checked)
     {
-        
-        if (TrackerType == "Arduino")
+
+        /*if (TrackerType == "Arduino")
         {
             arduino = new SerialPort(portName);
             trackerTimer = new QTimer(this);
@@ -419,79 +416,70 @@ void basic_QtVTK::startTracker(bool checked)
             trackerTimer->start(0);
             this->openGLWidget->GetInteractor()->Disable();
             return;
-        }
+        }*/
+
 
         // if tracker is not initialized, do so now
         if (!isTrackerInitialized)
-        {           
+        {
+            // Get tracker
+            if (dataCollector->GetDevice(trackerDevice, "TrackerDevice") != PLUS_SUCCESS)
+            {
+                LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice\". Check config file.");
+                exit;
+            }
+
+            // Cast Device to type vtkPlusNDITracker
+            myTracker = dynamic_cast<vtkPlusNDITracker*>(trackerDevice);
+
+            if (myTracker == NULL)
+            {
+                LOG_ERROR("Tracking device is not NDI Polaris/Aurora. Could not connect.");
+                exit(EXIT_FAILURE);
+            }
+
+            // Connect to devices
+            std::cout << "Connecting to NDI Polaris through COM" << myTracker->GetSerialPort();
+            if (dataCollector->Connect() != PLUS_SUCCESS)
+            {
+                std::cout << ".................... [FAILED]" << std::endl;
+                LOG_ERROR("Failed to connect to devices!");
+                exit;
+            }
+            if (dataCollector->Start() != PLUS_SUCCESS)
+            {
+                LOG_ERROR("Failed to connect to devices!");
+                exit;
+            }
+            if (transformRepository->ReadConfiguration(configRootElement) != PLUS_SUCCESS)
+            {
+                LOG_ERROR("Configuration incorrect for vtkPlusTransformRepository.");
+                exit(EXIT_FAILURE);
+            }
+            if (myTracker->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
+            {
+                LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
+                exit(EXIT_FAILURE);
+            }
+
             myTracker->SetBaudRate(115200); /*!< Set the baud rate sufficiently high. */
             int nMax = myTracker->GetNumberOfTools();
-
-            tools.resize(nMax);
-
-            for (int i = 0; i < (int)trackedObjects.size(); i++)
-            {
-                int port = std::get<0>(trackedObjects[i]);
-                QString romName = std::get<1>(trackedObjects[i]);
-                //this->myTracker->LoadVirtualSROM(port, romName.toStdString().c_str());
-                
-
-                //tools[i] = myTracker->GetTool(port);
-                qDebug() << "Loading" << romName << "into port" << port;
-            }
-
-            statusBar()->showMessage(tr("Tracking system NOT initialized."), 5000);
-            if (myTracker->Probe()) /*!< Find the tracker. */
-            {
-                qDebug() << "Tracker Initialized";
-                statusBar()->showMessage("Tracker Initialized", 5000);
-                isTrackerInitialized = true;
-
-                // enable the logo widget to display the status of each tracked object
-                this->createTrackerLogo();
-                trackerLogoWidget->On();
-                this->openGLWidget->GetRenderWindow()->Render();
-
-                // create a QTimer
-                trackerTimer = new QTimer(this);
-                connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
-
-            }
-            else
-            {
-                QErrorMessage *em = new QErrorMessage(this);
-                em->showMessage("Tracker Initialization Failed");
-
-                isTrackerInitialized = false;
-                trackerButton->setChecked(false);
-            }
-        }
-
-        if (isTrackerInitialized)
-        {
-            qDebug() << "Tracking started";
-            statusBar()->showMessage("Tracking started.", 5000);
-            myTracker->StartRecording();
-            trackerTimer->start(0); // in milli-second. 0 is as fast as we can
         }
     }
-    else
-    {
-        // button is un-toggled
-        if (isTrackerInitialized)
-        {
-            trackerTimer->stop();
 
-            myTracker->StopRecording();
+    qDebug() << "Tracker Initialized";
+    statusBar()->showMessage("Tracker Initialized", 5000);
+    isTrackerInitialized = true;
 
-            trackerLogoWidget->Off();
-            this->openGLWidget->GetRenderWindow()->Render();
+    // enable the logo widget to display the status of each tracked object
+    this->createTrackerLogo();
+    trackerLogoWidget->On();
+    this->openGLWidget->GetRenderWindow()->Render();
 
- 
-
-            statusBar()->showMessage("Tracking stopped.", 5000);
-        }
-    }
+    // create a QTimer
+    trackerTimer = new QTimer(this);
+    connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
+    trackerTimer->start(0);
 }
 
 
@@ -499,9 +487,34 @@ void basic_QtVTK::updateTrackerInfo()
 {
     if (isTrackerInitialized)
     {
-        myTracker->Update();
+        //myTracker->Update();
+        trackerChannel->GetTrackedFrame(trackerFrame);
+        transformRepository->SetTransforms(trackerFrame);
+        
+        bool isProbeMatrixValid = true;
 
-        for (int i = 0; i < (int)trackedObjects.size(); i++)
+        //myTracker->Update();
+        // Check if probe is visible
+
+        stylusToTracker->Identity();
+
+        
+
+        if (transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isProbeMatrixValid) == PLUS_SUCCESS)
+        {
+            // connected and withing good tracking accuracy. shown in green
+            trackerDrawing->SetDrawColor(0, 255, 0);
+            trackerDrawing->FillBox(1, 16, 1, 11);
+        }
+        else
+        {
+            trackerDrawing->SetDrawColor(0, 0, 255);
+            trackerDrawing->FillBox(1, 16, 1, 11);
+        }
+        //this->volume->SetUserMatrix(stylusToTracker);
+
+
+        /*for (int i = 0; i < (int)trackedObjects.size(); i++)
         {
             if (tools[i]->IsMissing())
             {
@@ -527,8 +540,8 @@ void basic_QtVTK::updateTrackerInfo()
                 trackerDrawing->SetDrawColor(0, 255, 0);
                 trackerDrawing->FillBox(logoWidgetX*i + i + 1, logoWidgetX*(i + 1) + i, 1, logoWidgetY + 1);
             }
-        }
-        this->setCameraUsingTracker();
+        }*/
+        //this->setCameraUsingTracker();
         trackerDrawing->Update();
         this->openGLWidget->GetRenderWindow()->Render();
 
@@ -846,7 +859,7 @@ void basic_QtVTK::createTrackerLogo()
     trackerLogoRepresentation->SetImage(trackerDrawing->GetOutput());
     trackerLogoRepresentation->SetPosition(.45, 0);
     trackerLogoRepresentation->SetPosition2(.1, .1);
-    trackerLogoRepresentation->GetImageProperty()->SetOpacity(1);
+    trackerLogoRepresentation->GetImageProperty()->SetOpacity(0.5);
     trackerLogoWidget->SetRepresentation(trackerLogoRepresentation);
 
     trackerLogoWidget->SetInteractor(this->openGLWidget->GetInteractor());

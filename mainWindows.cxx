@@ -139,71 +139,11 @@ POSSIBILITY OF SUCH DAMAGES.
 
 // PI
 const float M_PI = 4 * atan(1);
-char* portName = "\\\\.\\COM9";
-//char* portName2 = "\\\\.\\"
-
-//Arduino SerialPort object
-SerialPort *arduino;
-double a[4];
-#define MAX_DATA_LENGTH 1000
-byte incomingData[MAX_DATA_LENGTH];
-byte incomingDataTemp[MAX_DATA_LENGTH];
-
 const std::string TrackerType = "Arduino";
 
-void DecodeData();
+char* portName1 = "\\\\.\\COM6";
+char* portName2 = "\\\\.\\COM9";
 
-void exampleReceiveData(double *a)
-{
-
-    double usLength = 0;
-    double usRxLength = 0;
-
-    usLength = arduino->readSerialPort(incomingData, MAX_DATA_LENGTH);
-
-    //usLength = (UInt16)spSerialPort.Read(RxBuffer, usRxLength, 700);
-
-    usRxLength += usLength;
-    while (usRxLength >= 11)
-    {       
-        memcpy_s(incomingDataTemp, 1000, incomingData, 1000);
-        if (!((incomingDataTemp[0] == 0x55) & ((incomingDataTemp[1] & 0x50) == 0x50)))
-        {
-            for (int i = 1; i < usRxLength; i++) incomingData[i - 1] = incomingData[i];
-            usRxLength--;
-            continue;
-        }
-        if (((incomingDataTemp[0] + incomingDataTemp[1] + incomingDataTemp[2] + incomingDataTemp[3] + incomingDataTemp[4] + incomingDataTemp[5] + incomingDataTemp[6] + incomingDataTemp[7] + incomingDataTemp[8] + incomingDataTemp[9]) & 0xff) == incomingDataTemp[10])
-            DecodeData();
-        for (int i = 11; i < usRxLength; i++) incomingData[i - 11] = incomingData[i];
-        usRxLength -= 11;
-    }
-    DecodeData();
-    Sleep(10);
-
-}
-void DecodeData()
-{
-
-    // If Incoming Data is indicating Angles
-    if (incomingData[1] == 0x53)
-    {
-        a[0] = (short)(((short)(incomingData[3]) << 8) + (char)(incomingData[2]));
-        a[1] = (short)(((short)(incomingData[5]) << 8) + (char)(incomingData[4]));
-        a[2] = (short)(((short)(incomingData[7]) << 8) + (char)(incomingData[6]));
-        a[3] = (short)(((short)(incomingData[9]) << 8) + (char)(incomingData[8]));
-
-        // Convert to Degrees
-        a[0] = a[0] / 32768.0 * 180;
-        a[1] = a[1] / 32768.0 * 180;
-        a[2] = a[2] / 32768.0 * 180;
-    }
-
-    // Set Z orientation to 0
-    //a[2] = 0;
-    printf("Angle X: %f Angle Y: %f Angle Z: %f\n", a[0], a[1], a[2]);
-
-}
 
 template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
     vtkSmartPointer< PReader > reader =
@@ -214,8 +154,6 @@ template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
     return(vtkPolyData::SafeDownCast(reader->GetOutput()));
 }
 
-
-
 basic_QtVTK::basic_QtVTK()
 {
     this->setupUi(this);
@@ -225,6 +163,10 @@ basic_QtVTK::basic_QtVTK()
     setupVTKObjects();
     setupQTObjects();
 
+    // Initialize ArduinoTrackers
+    accelerometer1 = new ArduinoTracker(portName1);
+    accelerometer2 = new ArduinoTracker(portName2);
+
     ren->ResetCameraClippingRange();
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
@@ -233,13 +175,11 @@ basic_QtVTK::basic_QtVTK()
 
 void basic_QtVTK::createVTKObjects()
 {
-
-
     actor = vtkSmartPointer<vtkActor>::New();
     actor2 = vtkSmartPointer<vtkActor>::New();
 
-    vtkSphereSource *cone = vtkSphereSource::New();
-    vtkSphereSource *cone2 = vtkSphereSource::New();
+    vtkConeSource *cone = vtkConeSource::New();
+    vtkConeSource *cone2 = vtkConeSource::New();
 
     vtkPolyDataMapper *mapper = vtkPolyDataMapper::New();
     vtkPolyDataMapper *mapper2 = vtkPolyDataMapper::New();
@@ -275,8 +215,9 @@ void basic_QtVTK::createVTKObjects()
     calibration = vtkSmartPointer<vtkPlusProbeCalibrationAlgo>::New();
     
     
-    //ren->AddActor(actor);
-    //ren->AddActor(actor2);
+    ren->AddActor(actor);
+    ren->AddActor(actor2);
+    actor->SetPosition(0, 0, 5);
 }
 
 
@@ -330,21 +271,17 @@ void basic_QtVTK::setupQTObjects()
     statusIcon->SetMaxMessageCount(3000);
     statusbar->insertWidget(0, statusIcon);
 
-    vtkPlusNDITracker *tracker = vtkPlusNDITracker::New();
-
-
     // QPlusDeviceSetSelectorWidget
     m_DeviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
     m_DeviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
     m_DeviceSetSelectorWidget->SetConnectButtonText("Launch Server");
     m_DeviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
     m_DeviceSetSelectorWidget->setMaximumWidth(200);
-
     verticalLayout_4->addWidget(m_DeviceSetSelectorWidget);
-
     connect(m_DeviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
 }
 
+// Read config file and connect to devices
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
     qDebug() << "Connect using configuration file: " << aConfigFile.c_str();
@@ -366,6 +303,7 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
         exit;
     }
 
+    // Set transform names
     stylusToTrackerName.SetTransformName("StylusToTracker");
     referenceToTrackerName.SetTransformName("ReferenceToTracker");
     stylusTipToReferenceName.SetTransformName("StylusTipToReference");
@@ -379,16 +317,14 @@ void basic_QtVTK::startTracker(bool checked)
 {
     if (checked)
     {
-
-        /*if (TrackerType == "Arduino")
+        if (TrackerType == "Arduino")
         {
-            arduino = new SerialPort(portName);
             trackerTimer = new QTimer(this);
             connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateVolume1()));
             trackerTimer->start(0);
-            this->openGLWidget->GetInteractor()->Disable();
+            //this->openGLWidget->GetInteractor()->Disable();
             return;
-        }*/
+        }
 
 
         // if tracker is not initialized, do so now
@@ -416,12 +352,12 @@ void basic_QtVTK::startTracker(bool checked)
             {
                 std::cout << ".................... [FAILED]" << std::endl;
                 LOG_ERROR("Failed to connect to devices!");
-                exit;
+                exit(EXIT_FAILURE);
             }
             if (dataCollector->Start() != PLUS_SUCCESS)
             {
-                LOG_ERROR("Failed to connect to devices!");
-                exit;
+                LOG_ERROR("Failed to start Data collection!");
+                exit(EXIT_FAILURE);
             }
             if (transformRepository->ReadConfiguration(configRootElement) != PLUS_SUCCESS)
             {
@@ -572,21 +508,31 @@ void basic_QtVTK::loadFiducialPts()
 
 void basic_QtVTK::UpdateVolume1()
 {
-    if (arduino->isConnected())
+    if (this->accelerometer1->arduino->isConnected())
     {
-        exampleReceiveData(a);
+        this->accelerometer1->ReceiveData();
+        this->accelerometer2->ReceiveData();
 
         vtkNew<vtkTransform> volumeTransform;
         volumeTransform->Identity();
         volumeTransform->PostMultiply();    
 
-        volumeTransform->Translate(0, 0, 174.0);
+        vtkNew<vtkTransform> volumeTransform2;
+        volumeTransform2->Identity();
+        volumeTransform2->PostMultiply();
 
-        volumeTransform->RotateX(a[1] - 90);
-        volumeTransform->RotateY(a[0]);
-        volumeTransform->RotateZ(a[2] + 90);
+        //volumeTransform->Translate(0, 0, 174.0);
 
-        volume->SetUserTransform(volumeTransform);
+        volumeTransform->RotateX(this->accelerometer1->orientation[1] - 90);
+        volumeTransform->RotateY(this->accelerometer1->orientation[0]);
+        volumeTransform->RotateZ(this->accelerometer1->orientation[2] + 90);
+
+        volumeTransform2->RotateX(this->accelerometer2->orientation[1] - 90);
+        volumeTransform2->RotateY(this->accelerometer2->orientation[0]);
+        volumeTransform2->RotateZ(this->accelerometer2->orientation[2] + 90);
+
+        actor->SetUserTransform(volumeTransform);
+        actor2->SetUserTransform(volumeTransform2);
 
         this->openGLWidget->GetRenderWindow()->Render();
 
@@ -1028,14 +974,14 @@ void basic_QtVTK::collectDRR()
     vtkMatrix4x4* matr;
 
     // If acceloremeter is tracking get orientation from volume rather then camera
-    if (arduino && arduino->isConnected())
-    {
-        matr = this->volume->GetMatrix();
-    }
-    else
-    {
+    //if (arduino && arduino->isConnected())
+    //{
+    //    matr = this->volume->GetMatrix();
+    //}
+    //else
+    //{
         matr = this->ren->GetActiveCamera()->GetModelViewTransformMatrix();
-    }
+    //}
     //vtkMatrix4x4* matr = this->volume->GetMatrix();
     double *or1 = this->rotationMatrixToEulerAngles(matr);
 
@@ -1072,7 +1018,7 @@ void basic_QtVTK::collectSinglePointPhantom()
                 transform->PostMultiply();
                 transform->Identity();
                 transform->Concatenate(stylusTransform);
-                transform->Concatenate(phantomTransform);
+                transform->Concatenate(refTransform->GetLinearInverse());
                 transform->Update();
 
                 double pos[3];

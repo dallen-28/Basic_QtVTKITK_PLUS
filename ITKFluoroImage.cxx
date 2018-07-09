@@ -73,8 +73,8 @@ ITKFluoroImage::ITKFluoroImage(std::string inputFile, double rx1, double ry1, do
 
     // Read Image
     this->reader = ReaderType::New();
-    //this->reader->SetFileName("C:\\users\\danie\\documents\\CTChestDRR.mha");
-    this->reader->SetFileName(inputFile);
+    this->reader->SetFileName("C:\\users\\danie\\documents\\CTChestDRR.mha");
+    //this->reader->SetFileName(inputFile);
 
     this->ReadImage();
 
@@ -162,7 +162,7 @@ void ITKFluoroImage::InitializeTransform(double rx1, double ry1, double rz1)
 }
 
 // Initialize the parameters for the input image
-// based on the header information from the file
+// based on the header information from the file.
 // Used by the Euler transform for orienting the volume
 // in 3D space
 void ITKFluoroImage::InitializeInputImageParameters()

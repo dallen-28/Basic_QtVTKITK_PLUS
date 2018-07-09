@@ -54,6 +54,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include "PlusConfigure.h"
 #include "ITKFluoroImage.h"
 #include "PlusTrackedFrame.h"
+#include "ArduinoTracker.h"
 
 // C++ includes
 #include <tuple>
@@ -206,6 +207,10 @@ private:
 
     // ITK Object
     ITKFluoroImage*                                     fluoroImage;
+    
+    // Arduino Tracker Objects
+    ArduinoTracker *accelerometer1;
+    ArduinoTracker *accelerometer2;
 
     /*!
     * Tracker related objects.

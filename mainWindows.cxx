@@ -115,6 +115,8 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <PlusXmlUtils.h>
 #include <vtkPlusDataSource.h>
 #include <vtkPlusProbeCalibrationAlgo.h>
+#include <vtkPlusMicrochipTracker.h>
+
 
 // system
 #include <chrono>
@@ -159,17 +161,20 @@ basic_QtVTK::basic_QtVTK()
     this->setupUi(this);
     this->trackerWidget->hide();
 
+    //this->accelerometer1 = new ArduinoTracker(portName2);
+
     createVTKObjects();
     setupVTKObjects();
     setupQTObjects();
 
     // Initialize ArduinoTrackers
-    accelerometer1 = new ArduinoTracker(portName1);
-    accelerometer2 = new ArduinoTracker(portName2);
+
+    //accelerometer2 = new ArduinoTracker(portName2);
 
     ren->ResetCameraClippingRange();
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
+
 }
 
 
@@ -212,12 +217,13 @@ void basic_QtVTK::createVTKObjects()
     referenceToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
     stylusTipToReference = vtkSmartPointer<vtkMatrix4x4>::New();
     stylusTipToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    accelerometerToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
     calibration = vtkSmartPointer<vtkPlusProbeCalibrationAlgo>::New();
+        
     
-    
-    ren->AddActor(actor);
-    ren->AddActor(actor2);
-    actor->SetPosition(0, 0, 5);
+    //ren->AddActor(actor);
+    //ren->AddActor(actor2);
+    //actor->SetPosition(0, 0, 5);
 }
 
 
@@ -308,6 +314,7 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
     referenceToTrackerName.SetTransformName("ReferenceToTracker");
     stylusTipToReferenceName.SetTransformName("StylusTipToReference");
     stylusTipToTrackerName.SetTransformName("StylusTipToTracker");
+    accelerometerToTrackerName.SetTransformName("AccelerometerToTracker");
 }
 
 
@@ -317,15 +324,14 @@ void basic_QtVTK::startTracker(bool checked)
 {
     if (checked)
     {
-        if (TrackerType == "Arduino")
+        /*if (TrackerType == "Arduino")
         {
             trackerTimer = new QTimer(this);
             connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateVolume1()));
             trackerTimer->start(0);
             //this->openGLWidget->GetInteractor()->Disable();
             return;
-        }
-
+        }*/
 
         // if tracker is not initialized, do so now
         if (!isTrackerInitialized)
@@ -342,12 +348,13 @@ void basic_QtVTK::startTracker(bool checked)
 
             if (myTracker == NULL)
             {
-                LOG_ERROR("Tracking device is not NDI Polaris. Could not connect.");
-                exit(EXIT_FAILURE);
+                LOG_INFO("Tracking device is not NDI Polaris.");
+                myAccelerometer = dynamic_cast<vtkPlusMicrochipTracker*>(trackerDevice);
+                
             }
-
+      
             // Connect to devices
-            std::cout << "Connecting to NDI Polaris through COM" << myTracker->GetSerialPort();
+            //std::cout << "Connecting to Device through COM" << myTracker->GetSerialPort();
             if (dataCollector->Connect() != PLUS_SUCCESS)
             {
                 std::cout << ".................... [FAILED]" << std::endl;
@@ -364,16 +371,29 @@ void basic_QtVTK::startTracker(bool checked)
                 LOG_ERROR("Configuration incorrect for vtkPlusTransformRepository.");
                 exit(EXIT_FAILURE);
             }
-            if (myTracker->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
+            if (myTracker != NULL)
             {
-                LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
-                exit(EXIT_FAILURE);
+                if (myTracker->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
+                {
+                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
+                    exit(EXIT_FAILURE);
+                }
             }
-
-            myTracker->SetBaudRate(115200); /*!< Set the baud rate sufficiently high. */
-            int nMax = myTracker->GetNumberOfTools();
+            else
+            {
+                if (myAccelerometer->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
+                {
+                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
+                    exit(EXIT_FAILURE);
+                }
+            }
+         
+            //myTracker->SetBaudRate(115200); /*!< Set the baud rate sufficiently high. */
+            //int nMax = myTracker->GetNumberOfTools();
         }
     }
+
+    myAccelerometer->SetBaudRate(19200);
 
     qDebug() << "Tracker Initialized";
     statusBar()->showMessage("Tracker Initialized", 5000);
@@ -399,33 +419,70 @@ void basic_QtVTK::updateTrackerInfo()
         trackerChannel->GetTrackedFrame(trackerFrame);
         transformRepository->SetTransforms(trackerFrame);
         
-        bool isProbeMatrixValid = false;
-        // Check if probe is visible  
-        if (transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isProbeMatrixValid) == PLUS_SUCCESS && isProbeMatrixValid)
+        if (myTracker != NULL)
         {
-            // connected and withing good tracking accuracy. shown in green
-            trackerDrawing->SetDrawColor(0, 255, 0);
-            trackerDrawing->FillBox(1, 16, 1, 11);
-        }
-        else
-        {
-            trackerDrawing->SetDrawColor(255, 0, 0);
-            trackerDrawing->FillBox(1, 16, 1, 11);
-        }
+            bool isProbeMatrixValid = false;
+            // Check if probe is visible  
+            if (transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isProbeMatrixValid) == PLUS_SUCCESS && isProbeMatrixValid)
+            {
+                // connected and withing good tracking accuracy. shown in green
+                trackerDrawing->SetDrawColor(0, 255, 0);
+                trackerDrawing->FillBox(1, 16, 1, 11);
+            }
+            else
+            {
+                trackerDrawing->SetDrawColor(255, 0, 0);
+                trackerDrawing->FillBox(1, 16, 1, 11);
+            }
 
-        bool isReferenceMatrixValid = false;
-        // Check if reference is visible
-        if (transformRepository->GetTransform(referenceToTrackerName, referenceToTracker, &isReferenceMatrixValid) == PLUS_SUCCESS && isReferenceMatrixValid)
-        {
-            // connected and withing good tracking accuracy. shown in green
-            trackerDrawing->SetDrawColor(0, 255, 0);
-            trackerDrawing->FillBox(17, 33, 1, 11);
+            bool isReferenceMatrixValid = false;
+            // Check if reference is visible
+            if (transformRepository->GetTransform(referenceToTrackerName, referenceToTracker, &isReferenceMatrixValid) == PLUS_SUCCESS && isReferenceMatrixValid)
+            {
+                // connected and withing good tracking accuracy. shown in green
+                trackerDrawing->SetDrawColor(0, 255, 0);
+                trackerDrawing->FillBox(17, 33, 1, 11);
+            }
+            else
+            {
+                trackerDrawing->SetDrawColor(255, 0, 0);
+                trackerDrawing->FillBox(17, 33, 1, 11);
+            }
+            bool isValid = false;
+            transformRepository->GetTransform(stylusTipToTrackerName, stylusTipToTracker, &isValid);
+
+            this->setCameraUsingTracker();
+
+            vtkSmartPointer<vtkTransform> refTransform = vtkSmartPointer<vtkTransform>::New();
+            refTransform->SetMatrix(referenceToTracker);
+
+            phantomTransform->Identity();
+            phantomTransform->PostMultiply();
+            phantomTransform->Concatenate(phantomRegTransform->GetMatrix());
+            phantomTransform->Concatenate(refTransform);
+            volume->SetUserTransform(phantomTransform);
+
+            //this->actor->SetUserMatrix(stylusTipToReference);
+            //vtkSmartPointer<vtkTransform> tran = vtkSmartPointer<vtkTransform>::New();
+
+            //stylusActor->SetUserTransform(tools[toolIdx]->GetTransform());
+            //tran->SetMatrix(stylusToTracker);
+            //stylusActor->SetUserTransform(tran);
+
+            //volume->SetUserMatrix(referenceToTracker);
+
+            trackerDrawing->Update();
+            this->openGLWidget->GetRenderWindow()->Render();
+            return;
+
         }
-        else
-        {
-            trackerDrawing->SetDrawColor(255, 0, 0);
-            trackerDrawing->FillBox(17, 33, 1, 11);
-        }
+        // Else Device is GenericSerial
+        bool isValid = false;
+        transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
+        this->volume->SetUserMatrix(accelerometerToTracker);
+        this->openGLWidget->GetRenderWindow()->Render();
+
+
 
         //this->volume->SetUserMatrix(stylusToTracker);
 
@@ -458,32 +515,6 @@ void basic_QtVTK::updateTrackerInfo()
             }
         }*/
 
-        bool isValid = false;
-        transformRepository->GetTransform(stylusTipToTrackerName, stylusTipToTracker, &isValid);
-
-        this->setCameraUsingTracker();
-
-        vtkSmartPointer<vtkTransform> refTransform = vtkSmartPointer<vtkTransform>::New();
-        refTransform->SetMatrix(referenceToTracker);
-
-        phantomTransform->Identity();
-        phantomTransform->PostMultiply();
-        phantomTransform->Concatenate(phantomRegTransform->GetMatrix());
-        phantomTransform->Concatenate(refTransform);
-        volume->SetUserTransform(phantomTransform);
-
-        //this->actor->SetUserMatrix(stylusTipToReference);
-        //vtkSmartPointer<vtkTransform> tran = vtkSmartPointer<vtkTransform>::New();
-
-        //stylusActor->SetUserTransform(tools[toolIdx]->GetTransform());
-        //tran->SetMatrix(stylusToTracker);
-        //stylusActor->SetUserTransform(tran);
-
-        //volume->SetUserMatrix(referenceToTracker);
-
-        trackerDrawing->Update();
-        this->openGLWidget->GetRenderWindow()->Render();
-
     }
 }
 
@@ -511,28 +542,28 @@ void basic_QtVTK::UpdateVolume1()
     if (this->accelerometer1->arduino->isConnected())
     {
         this->accelerometer1->ReceiveData();
-        this->accelerometer2->ReceiveData();
+        //this->accelerometer2->ReceiveData();
 
         vtkNew<vtkTransform> volumeTransform;
         volumeTransform->Identity();
         volumeTransform->PostMultiply();    
 
-        vtkNew<vtkTransform> volumeTransform2;
-        volumeTransform2->Identity();
-        volumeTransform2->PostMultiply();
+        //vtkNew<vtkTransform> volumeTransform2;
+        //volumeTransform2->Identity();
+        //volumeTransform2->PostMultiply();
 
-        //volumeTransform->Translate(0, 0, 174.0);
+        volumeTransform->Translate(0, 0, 174.0);
 
         volumeTransform->RotateX(this->accelerometer1->orientation[1] - 90);
         volumeTransform->RotateY(this->accelerometer1->orientation[0]);
         volumeTransform->RotateZ(this->accelerometer1->orientation[2] + 90);
 
-        volumeTransform2->RotateX(this->accelerometer2->orientation[1] - 90);
-        volumeTransform2->RotateY(this->accelerometer2->orientation[0]);
-        volumeTransform2->RotateZ(this->accelerometer2->orientation[2] + 90);
+        //volumeTransform2->RotateX(this->accelerometer2->orientation[1] - 90);
+        //volumeTransform2->RotateY(this->accelerometer2->orientation[0]);
+        //volumeTransform2->RotateZ(this->accelerometer2->orientation[2] + 90);
 
         actor->SetUserTransform(volumeTransform);
-        actor2->SetUserTransform(volumeTransform2);
+        //actor2->SetUserTransform(volumeTransform2);
 
         this->openGLWidget->GetRenderWindow()->Render();
 

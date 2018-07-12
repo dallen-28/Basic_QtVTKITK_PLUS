@@ -103,6 +103,8 @@ class vtkPlusOpenIGTLinkServer;
 class vtkPlusTransformRepository;
 class vtkPlusDataCollector;
 class vtkPlusDataSource;
+class vtkPlusMicrochipTracker;
+class vtkPlusGenericSerialDevice;
 
 class QTimer;
 
@@ -212,21 +214,26 @@ private:
     ArduinoTracker *accelerometer1;
     ArduinoTracker *accelerometer2;
 
-    /*!
-    * Tracker related objects.
-    */
+    // Tracker Devices
     vtkPlusNDITracker                                   *myTracker;
+    vtkPlusMicrochipTracker                             *myAccelerometer;
     vtkPlusDevice                                       *trackerDevice;
+
+    // Tracker Related Objects
     vtkSmartPointer<vtkPlusDataCollector>               dataCollector;
     vtkSmartPointer<vtkPlusTransformRepository>         transformRepository;
     vtkPlusChannel                                      *trackerChannel;
     PlusTrackedFrame                                    trackerFrame;
+
+    // Transform Names
     PlusTransformName                                   stylusToTrackerName;
     PlusTransformName                                   referenceToTrackerName;
     PlusTransformName                                   stylusTipToReferenceName;
     PlusTransformName                                   stylusTipToTrackerName;
+    PlusTransformName                                   accelerometerToTrackerName;
 
     // Transforms
+    vtkSmartPointer<vtkMatrix4x4>                       accelerometerToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       stylusToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       referenceToTracker;       
     vtkSmartPointer<vtkMatrix4x4>                       stylusTipToReference;
@@ -234,6 +241,7 @@ private:
 
     vtkSmartPointer<vtkPlusProbeCalibrationAlgo>        calibration;
 
+    // AIGS 
     std::vector< trackedObjectTypes >                   trackedObjects;
     std::vector< vtkTrackerTool* >                      tools;
     //std::vector< vtkPlusDataSource* >                   tools;

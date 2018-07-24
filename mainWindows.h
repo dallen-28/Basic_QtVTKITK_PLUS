@@ -154,15 +154,14 @@ public:
     void screenShot();
     void startTracker(bool);
     void updateTrackerInfo();
-    void UpdateVolume1();
     void stylusCalibration(bool);
     void collectSinglePointPhantom();
     void collectDRR();
     void resetPhantomCollectedPoints();
     void deleteOnePhantomCollectedPoints();
     void performPhantomRegistration();
-    void setCameraUsingTracker();
-    double* rotationMatrixToEulerAngles(vtkMatrix4x4* R);
+    void setCameraUsingNDITracker();
+    void setCameraUsingWitMotionTracker();
 
     void aboutThisProgram();
 
@@ -172,6 +171,9 @@ protected:
 
     /*! Store local config file name */
     std::string                           m_LocalConfigFile;
+
+    /* Store config root element */
+    vtkSmartPointer<vtkXMLDataElement>    m_configRootElement;
 
 public:
     // centralized location to initiate all vtk objects
@@ -196,10 +198,8 @@ private:
     QTimer                                              *trackerTimer;
 
     // VTK Objects
-    vtkSmartPointer<vtkActor>                           actor;
-    vtkSmartPointer<vtkActor>                           actor2;
-
     vtkSmartPointer<vtkActor>                           stylusActor;
+    vtkSmartPointer<vtkActor>                           actor;
     vtkSmartPointer<vtkVolume>                          volume;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow>       renWin;
     vtkSmartPointer<vtkRenderer>                        ren;
@@ -208,15 +208,8 @@ private:
     vtkSmartPointer<vtkLogoRepresentation>              trackerLogoRepresentation;
     vtkSmartPointer<vtkLogoWidget>                      trackerLogoWidget;
 
-    // ITK Object
-    ITKFluoroImage*                                     fluoroImage;
-    
-    // Arduino Tracker Objects
-    ArduinoTracker *accelerometer1;
-    ArduinoTracker *accelerometer2;
-
     // Tracker Devices
-    vtkPlusNDITracker                                   *myTracker;
+    vtkPlusNDITracker                                   *myNDITracker;
     vtkPlusWitMotionTracker                             *myAccelerometer;
     vtkPlusDevice                                       *trackerDevice;
 
@@ -239,18 +232,10 @@ private:
     vtkSmartPointer<vtkMatrix4x4>                       referenceToTracker;       
     vtkSmartPointer<vtkMatrix4x4>                       stylusTipToReference;
     vtkSmartPointer<vtkMatrix4x4>                       stylusTipToTracker;
-
-    vtkSmartPointer<vtkPlusProbeCalibrationAlgo>        calibration;
-
-    // AIGS 
-    std::vector< trackedObjectTypes >                   trackedObjects;
-    std::vector< vtkTrackerTool* >                      tools;
-    //std::vector< vtkPlusDataSource* >                   tools;
-
-    vtkSmartPointer<vtkXMLDataElement>                  configRootElement;
-
     vtkSmartPointer<vtkTransform>                       phantomTransform;
     vtkSmartPointer<vtkLandmarkTransform>               phantomRegTransform;
+
+    // Points for fiducial registration
     vtkSmartPointer<vtkPoints>                          fiducialPts;
     vtkSmartPointer<vtkPoints>                          targetPoints;
 

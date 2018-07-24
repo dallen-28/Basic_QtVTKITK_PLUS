@@ -142,10 +142,6 @@ POSSIBILITY OF SUCH DAMAGES.
 
 // PI
 const float M_PI = 4 * atan(1);
-const std::string TrackerType = "Arduino";
-
-char* portName1 = "\\\\.\\COM6";
-char* portName2 = "\\\\.\\COM9";
 
 
 template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
@@ -162,15 +158,9 @@ basic_QtVTK::basic_QtVTK()
     this->setupUi(this);
     this->trackerWidget->hide();
 
-    //this->accelerometer1 = new ArduinoTracker(portName2);
-
     createVTKObjects();
     setupVTKObjects();
     setupQTObjects();
-
-    // Initialize ArduinoTrackers
-
-    //accelerometer2 = new ArduinoTracker(portName2);
 
     ren->ResetCameraClippingRange();
     this->openGLWidget->GetRenderWindow()->Render();
@@ -181,23 +171,9 @@ basic_QtVTK::basic_QtVTK()
 
 void basic_QtVTK::createVTKObjects()
 {
-    actor = vtkSmartPointer<vtkActor>::New();
-    actor2 = vtkSmartPointer<vtkActor>::New();
-
-    vtkConeSource *cone = vtkConeSource::New();
-    vtkConeSource *cone2 = vtkConeSource::New();
-
-    vtkPolyDataMapper *mapper = vtkPolyDataMapper::New();
-    vtkPolyDataMapper *mapper2 = vtkPolyDataMapper::New();
-
-    mapper->SetInputConnection(cone->GetOutputPort());
-    mapper2->SetInputConnection(cone2->GetOutputPort());
-    actor->SetMapper(mapper);
-    actor2->SetMapper(mapper2);
 
     volume = vtkSmartPointer<vtkVolume>::New();
-    //myTracker = vtkSmartPointer< vtkNDITracker >::New();
-    myTracker = vtkSmartPointer< vtkPlusNDITracker >::New();
+    myNDITracker = vtkSmartPointer< vtkPlusNDITracker >::New();
 
     ren = vtkSmartPointer<vtkRenderer>::New();
     ren2 = vtkSmartPointer<vtkRenderer>::New();
@@ -219,12 +195,6 @@ void basic_QtVTK::createVTKObjects()
     stylusTipToReference = vtkSmartPointer<vtkMatrix4x4>::New();
     stylusTipToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
     accelerometerToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
-    calibration = vtkSmartPointer<vtkPlusProbeCalibrationAlgo>::New();
-        
-    
-    //ren->AddActor(actor);
-    //ren->AddActor(actor2);
-    //actor->SetPosition(0, 0, 5);
 }
 
 
@@ -232,7 +202,10 @@ void basic_QtVTK::cleanVTKObjects()
 {
     // if needed
     if (isTrackerInitialized)
-        myTracker->StopRecording();
+    {
+        myNDITracker->StopRecording();
+    }
+        
 }
 
 
@@ -243,13 +216,11 @@ void basic_QtVTK::setupVTKObjects()
 
     // tracker
     this->isTrackerInitialized = isStylusCalibrated = false;
-    trackedObjects.push_back(std::make_tuple(4, QString("C://users//danie//documents//NDI_roms//8700340.rom"), enumTrackedObjectTypes::enStylus)); // NDI 3 sphere linear stylus
-    trackedObjects.push_back(std::make_tuple(5, QString("C://users//danie//documents//NDI_roms//8700302.rom"), enumTrackedObjectTypes::enOthers)); // NDI 4 sphere planar
-
     this->openGLWidget->SetRenderWindow(renWin);
 
     // VTK Renderer
     ren->SetBackground(.1, .2, .4);
+    ren2->SetBackground(1, 1, 1);
 
     // connect VTK with Qt
     this->openGLWidget->GetRenderWindow()->AddRenderer(ren);
@@ -293,18 +264,18 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
     qDebug() << "Connect using configuration file: " << aConfigFile.c_str();
 
-    configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
+    m_configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
 
     // Read configuration
-    if (PlusXmlUtils::ReadDeviceSetConfigurationFromFile(configRootElement, aConfigFile.c_str()) == PLUS_FAIL)
+    if (PlusXmlUtils::ReadDeviceSetConfigurationFromFile(m_configRootElement, aConfigFile.c_str()) == PLUS_FAIL)
     {
         LOG_ERROR("Unable to read configuration from file" << aConfigFile.c_str());
         exit;
     }
 
-    vtkPlusConfig::GetInstance()->SetDeviceSetConfigurationData(configRootElement);
+    vtkPlusConfig::GetInstance()->SetDeviceSetConfigurationData(m_configRootElement);
 
-    if (dataCollector->ReadConfiguration(configRootElement) != PLUS_SUCCESS)
+    if (dataCollector->ReadConfiguration(m_configRootElement) != PLUS_SUCCESS)
     {
         LOG_ERROR("Configuration incorrect for vtkPlusDataCollector.");
         exit;
@@ -323,17 +294,11 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 // 
 void basic_QtVTK::startTracker(bool checked)
 {
+    // Put below code into method such as follows:
+    // this->DataCollector->SetUpDevices(m_configFile);
+
     if (checked)
     {
-        /*if (TrackerType == "Arduino")
-        {
-            trackerTimer = new QTimer(this);
-            connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateVolume1()));
-            trackerTimer->start(0);
-            //this->openGLWidget->GetInteractor()->Disable();
-            return;
-        }*/
-
         // if tracker is not initialized, do so now
         if (!isTrackerInitialized)
         {
@@ -345,9 +310,9 @@ void basic_QtVTK::startTracker(bool checked)
             }
 
             // Cast Device to type vtkPlusNDITracker
-            myTracker = dynamic_cast<vtkPlusNDITracker*>(trackerDevice);
+            myNDITracker = dynamic_cast<vtkPlusNDITracker*>(trackerDevice);
 
-            if (myTracker == NULL)
+            if (myNDITracker == NULL)
             {
                 LOG_INFO("Tracking device is not NDI Polaris.");
                 myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice);
@@ -367,14 +332,14 @@ void basic_QtVTK::startTracker(bool checked)
                 LOG_ERROR("Failed to start Data collection!");
                 exit(EXIT_FAILURE);
             }
-            if (transformRepository->ReadConfiguration(configRootElement) != PLUS_SUCCESS)
+            if (transformRepository->ReadConfiguration(m_configRootElement) != PLUS_SUCCESS)
             {
                 LOG_ERROR("Configuration incorrect for vtkPlusTransformRepository.");
                 exit(EXIT_FAILURE);
             }
-            if (myTracker != NULL)
+            if (myNDITracker != NULL)
             {
-                if (myTracker->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
+                if (myNDITracker->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
                 {
                     LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
                     exit(EXIT_FAILURE);
@@ -415,133 +380,23 @@ void basic_QtVTK::startTracker(bool checked)
 
 void basic_QtVTK::updateTrackerInfo()
 {
-    if (isTrackerInitialized)
+    // this->DataCollector->UpdateTrackerInfo();
+    /* */
+    if (!isTrackerInitialized)
     {
-        trackerChannel->GetTrackedFrame(trackerFrame);
-        transformRepository->SetTransforms(trackerFrame);
-        
-        if (myTracker != NULL)
-        {
-            bool isProbeMatrixValid = false;
-            // Check if probe is visible  
-            if (transformRepository->GetTransform(stylusToTrackerName, stylusToTracker, &isProbeMatrixValid) == PLUS_SUCCESS && isProbeMatrixValid)
-            {
-                // connected and withing good tracking accuracy. shown in green
-                trackerDrawing->SetDrawColor(0, 255, 0);
-                trackerDrawing->FillBox(1, 16, 1, 11);
-            }
-            else
-            {
-                trackerDrawing->SetDrawColor(255, 0, 0);
-                trackerDrawing->FillBox(1, 16, 1, 11);
-            }
-
-            bool isReferenceMatrixValid = false;
-            // Check if reference is visible
-            if (transformRepository->GetTransform(referenceToTrackerName, referenceToTracker, &isReferenceMatrixValid) == PLUS_SUCCESS && isReferenceMatrixValid)
-            {
-                // connected and withing good tracking accuracy. shown in green
-                trackerDrawing->SetDrawColor(0, 255, 0);
-                trackerDrawing->FillBox(17, 33, 1, 11);
-            }
-            else
-            {
-                trackerDrawing->SetDrawColor(255, 0, 0);
-                trackerDrawing->FillBox(17, 33, 1, 11);
-            }
-            bool isValid = false;
-            transformRepository->GetTransform(stylusTipToTrackerName, stylusTipToTracker, &isValid);
-
-            this->setCameraUsingTracker();
-
-            vtkSmartPointer<vtkTransform> refTransform = vtkSmartPointer<vtkTransform>::New();
-            refTransform->SetMatrix(referenceToTracker);
-
-            phantomTransform->Identity();
-            phantomTransform->PostMultiply();
-            phantomTransform->Concatenate(phantomRegTransform->GetMatrix());
-            phantomTransform->Concatenate(refTransform);
-            volume->SetUserTransform(phantomTransform);
-
-            //this->actor->SetUserMatrix(stylusTipToReference);
-            //vtkSmartPointer<vtkTransform> tran = vtkSmartPointer<vtkTransform>::New();
-
-            //stylusActor->SetUserTransform(tools[toolIdx]->GetTransform());
-            //tran->SetMatrix(stylusToTracker);
-            //stylusActor->SetUserTransform(tran);
-
-            //volume->SetUserMatrix(referenceToTracker);
-
-            trackerDrawing->Update();
-            this->openGLWidget->GetRenderWindow()->Render();
-            return;
-
-        }
-
-
-        // Else Device is GenericSerial
-        bool isValid = false;
-        transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
-
-        double m[16] = { 0,1,0,0,
-            0,0,1,0,
-            1,0,0,0,
-            0,0,0,1 };
-
-        vtkNew<vtkMatrix4x4> mym4x4;
-        mym4x4->DeepCopy(m);
-
-        vtkNew<vtkTransform> cameraTransform;
-        cameraTransform->PostMultiply();
-        cameraTransform->Identity();
-        cameraTransform->Translate(0, 0, -500);
-        cameraTransform->Concatenate(accelerometerToTracker);
-        //cameraTransform->SetMatrix(accelerometerToTracker);
-        //cameraTransform->Translate(0, 0, -135);
-        cameraTransform->Concatenate(mym4x4);
-        cameraTransform->Translate(0, 0, -174);
-        cameraTransform->Update();
-
-        this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
-        double up[4] = { 1,0,0,0 };
-        double out[4];
-        cameraTransform->MultiplyPoint(up, out);
-        this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
-        this->ren->GetActiveCamera()->SetFocalPoint(0, 0, -174);
-
-        //this->volume->SetUserMatrix(accelerometerToTracker);
-        this->openGLWidget->GetRenderWindow()->Render();
-
-        //this->volume->SetUserMatrix(stylusToTracker);
-        /*for (int i = 0; i < (int)trackedObjects.size(); i++)
-        {
-            if (tools[i]->IsMissing())
-            {
-                // not connected, shown in blue
-                trackerDrawing->SetDrawColor(0, 0, 255);
-                trackerDrawing->FillBox(logoWidgetX*i + i + 1, logoWidgetX*(i + 1) + i, 1, logoWidgetY + 1);
-            }
-            else if (tools[i]->IsOutOfVolume())
-            {
-                // connected, visible but not accurate, shown in yellow
-                trackerDrawing->SetDrawColor(255, 255, 0);
-                trackerDrawing->FillBox(logoWidgetX*i + i + 1, logoWidgetX*(i + 1) + i, 1, logoWidgetY + 1);
-            }
-            else if (tools[i]->IsOutOfView())
-            {
-                // connected, visible, but outside of the tracking volume. Shown in red
-                trackerDrawing->SetDrawColor(255, 0, 0);
-                trackerDrawing->FillBox(logoWidgetX*i + i + 1, logoWidgetX*(i + 1) + i, 1, logoWidgetY + 1);
-            }
-            else
-            {
-                // connected and withing good tracking accuracy. shown in green
-                trackerDrawing->SetDrawColor(0, 255, 0);
-                trackerDrawing->FillBox(logoWidgetX*i + i + 1, logoWidgetX*(i + 1) + i, 1, logoWidgetY + 1);
-            }
-        }*/
-
+        LOG_ERROR("Attempting to update Tracker when tracker is not initialized");
+        exit(EXIT_FAILURE);
     }
+
+    trackerChannel->GetTrackedFrame(trackerFrame);
+    transformRepository->SetTransforms(trackerFrame);
+        
+    bool isValid = false;
+    transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
+
+    this->setCameraUsingWitMotionTracker();
+    this->openGLWidget->GetRenderWindow()->Render();
+
 }
 
 
@@ -563,38 +418,6 @@ void basic_QtVTK::loadFiducialPts()
     statusBar()->showMessage(tr("Loaded fiducial file"));
 }
 
-void basic_QtVTK::UpdateVolume1()
-{
-    if (this->accelerometer1->arduino->isConnected())
-    {
-        this->accelerometer1->ReceiveData();
-        //this->accelerometer2->ReceiveData();
-
-        vtkNew<vtkTransform> volumeTransform;
-        volumeTransform->Identity();
-        volumeTransform->PostMultiply();    
-
-        //vtkNew<vtkTransform> volumeTransform2;
-        //volumeTransform2->Identity();
-        //volumeTransform2->PostMultiply();
-
-        volumeTransform->Translate(0, 0, 174.0);
-
-        volumeTransform->RotateX(this->accelerometer1->orientation[1] - 90);
-        volumeTransform->RotateY(this->accelerometer1->orientation[0]);
-        volumeTransform->RotateZ(this->accelerometer1->orientation[2] + 90);
-
-        //volumeTransform2->RotateX(this->accelerometer2->orientation[1] - 90);
-        //volumeTransform2->RotateY(this->accelerometer2->orientation[0]);
-        //volumeTransform2->RotateZ(this->accelerometer2->orientation[2] + 90);
-
-        actor->SetUserTransform(volumeTransform);
-        //actor2->SetUserTransform(volumeTransform2);
-
-        this->openGLWidget->GetRenderWindow()->Render();
-
-    }
-}
 
 void basic_QtVTK::loadMesh()
 {
@@ -636,9 +459,6 @@ void basic_QtVTK::loadMesh()
     }
     else if (info.suffix() == QString(tr("mha")))
     {
-        // Intialize ITK object
-        this->fluoroImage = new ITKFluoroImage(fname.toStdString(), 0.0, 0.0, 0.0);
-
         vtkMetaImageReader *metaReader = vtkMetaImageReader::New();
         metaReader->SetFileName(fname.toUtf8());
         //metaReader->SetFileName("C://users//danie//Documents//CTChest.mha");
@@ -660,6 +480,7 @@ void basic_QtVTK::loadMesh()
     else
     {
         knownFileType = false;
+        LOG_ERROR("Unknown file Type")
     }
 
     if (knownFileType)
@@ -675,12 +496,29 @@ void basic_QtVTK::loadMesh()
         property->SetScalarOpacity(opacityFun);
         property->SetInterpolationTypeToLinear();
 
-        colorFun->AddRGBPoint(-3024, 0, 0, 0, 0.5, 0.0);
-        colorFun->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
-        colorFun->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
-        colorFun->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
+        colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
+        colorFun->AddRGBPoint(-1592.78540039063, 0.250980392156863, 0.250980392156863, 0.250980392156863);
+        colorFun->AddRGBPoint(-124.556709289551, 0.501960784313725, 0.501960784313725, 0.501960784313725);
+        colorFun->AddRGBPoint(998.206420898438, 0.752941176470588, 0.752941176470588, 0.752941176470588);
+        colorFun->AddRGBPoint(2466.43505859375, 1, 1, 1);
+        colorFun->AddRGBPoint(3071, 1, 1, 1);
 
-        opacityFun->AddPoint(-3024, 0, 0.5, 0.0);
+        opacityFun->AddPoint(-3024, 0);
+        opacityFun->AddPoint(-3024, 0);
+        opacityFun->AddPoint(-1284.333984375, 0);
+        opacityFun->AddPoint(171.556655883789, 0);
+        opacityFun->AddPoint(702.093078613281, 0.0952381044626236);
+        opacityFun->AddPoint(3071, 0);
+        opacityFun->AddPoint(3071, 0);
+
+        property->ShadeOff();
+
+
+        /*colorFun->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
+        colorFun->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
+        colorFun->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);*/
+
+        /*opacityFun->AddPoint(-3024, 0, 0.5, 0.0);
         opacityFun->AddPoint(-16, 0, .49, .61);
         opacityFun->AddPoint(641, .72, .5, 0.0);
         opacityFun->AddPoint(3071, .71, 0.5, 0.0);
@@ -691,7 +529,7 @@ void basic_QtVTK::loadMesh()
         property->SetDiffuse(0.9);
         property->SetSpecular(0.2);
         property->SetSpecularPower(10.0);
-        property->SetScalarOpacityUnitDistance(0.8919);
+        property->SetScalarOpacityUnitDistance(0.8919);*/
 
         if (info.suffix() == QString(tr("mha")))
         {
@@ -699,8 +537,8 @@ void basic_QtVTK::loadMesh()
 
             volume->SetMapper(volumeMapper);
             volume->SetProperty(property);
-            ren->AddVolume(volume);
-            ren2->AddActor(this->fluoroImage->ExportToVTK());
+            //ren->AddVolume(volume);
+            ren2->AddVolume(volume);
         }
         
         else
@@ -718,7 +556,7 @@ void basic_QtVTK::loadMesh()
         ren->ResetCameraClippingRange();
         this->openGLWidget->GetRenderWindow()->Render();
 
-        vtkInteractorStyleImage *inStyle = vtkInteractorStyleImage::New();
+        vtkInteractorStyleTrackballCamera *inStyle = vtkInteractorStyleTrackballCamera::New();
         this->openGLWidget2->GetInteractor()->SetInteractorStyle(inStyle);
 
         ren2->ResetCamera();
@@ -737,57 +575,7 @@ void basic_QtVTK::loadMesh()
 
 void basic_QtVTK::stylusCalibration(bool checked)
 {
-    // assumes that there is only 1 stylus among all the tracked objects
-
-    // make sure the tracker is initialized/found first.
-    if (isTrackerInitialized)
-    {      
-
-        // find out which port is the stylus
-        int stylusPort = -1;
-        int toolIdx = -1;
-        for (int i = 0; i < (int)trackedObjects.size(); i++)
-        {
-            int port = std::get<0>(trackedObjects[i]);
-            enumTrackedObjectTypes myType = std::get<2>(trackedObjects[i]);
-
-            if (myType == enumTrackedObjectTypes::enStylus)
-            {
-                stylusPort = port;
-                toolIdx = i;
-            }
-        }
-
-        if (checked)
-        {
-            qDebug() << "Starting pivot calibration";
-            double m[16] = { 1,0,0,0,
-                0,1,0,0,
-                0,0,1,0,
-                0,0,0,1 };
-            vtkNew<vtkMatrix4x4> matrix;
-            matrix->DeepCopy(m);
-
-            qDebug() << "stylus port:" << stylusPort << "index:" << toolIdx;
-            tools[toolIdx]->SetCalibrationMatrix(matrix);
-            tools[toolIdx]->InitializeToolTipCalibration();
-            tools[toolIdx]->SetCollectToolTipCalibrationData(1);
-        }
-        else
-        {
-            tools[toolIdx]->SetCollectToolTipCalibrationData(0);
-            this->stylusTipRMS->display(tools[toolIdx]->DoToolTipCalibration());
-            isStylusCalibrated = true;
-            qDebug() << "Pivot calibration finished";
-            // tools[toolIdx]->Print(std::cerr);
-            createLinearZStylusActor();
-        }
-    }
-    else
-    {
-        // if tracker is not initialized, do nothing and uncheck the button
-        pivotButton->setChecked(false);
-    }
+    // Implement pivot/spin calibration in PLUS
 }
 
 
@@ -796,7 +584,8 @@ void basic_QtVTK::createTrackerLogo()
     logoWidgetX = 16;
     logoWidgetY = 10;
 
-    int nObjects = (int)trackedObjects.size();
+    // hardcoded for now
+    int nObjects = 2;
 
     trackerDrawing->SetScalarTypeToUnsignedChar();
     trackerDrawing->SetNumberOfScalarComponents(3);
@@ -850,7 +639,9 @@ void basic_QtVTK::editRendererBackgroundColor()
         int r, g, b;
         color.getRgb(&r, &g, &b);
         ren->SetBackground((double)r / 255.0, (double)g / 255.0, (double)b / 255.0);
-        ren2->SetBackground((double)r / 255.0, (double)g / 255.0, (double)b / 255.0);
+
+        // Set Fluoro Background to white
+        ren2->SetBackground(255.0, 255.0, 255.0);
 
 
         this->openGLWidget->GetRenderWindow()->Render();
@@ -860,17 +651,7 @@ void basic_QtVTK::editRendererBackgroundColor()
 
 void basic_QtVTK::editMeshColor()
 {
-    QColor color = QColorDialog::getColor(Qt::gray, this);
-
-    if (color.isValid())
-    {
-        int r, g, b;
-        color.getRgb(&r, &g, &b);
-        actor->GetProperty()->SetColor((double)r / 255.0, (double)g / 255.0, (double)b / 255.0);
-
-
-        this->openGLWidget->GetRenderWindow()->Render();
-    }
+    // use this slot for selecting Transfer function preset
 }
 
 
@@ -896,19 +677,6 @@ void basic_QtVTK::createLinearZStylusActor()
     double radius = 1.5; // mm
     int nSides = 36;
     // find out which port is the stylus
-    int stylusPort = -1;
-    int toolIdx = -1;
-    for (int i = 0; i < (int)trackedObjects.size(); i++)
-    {
-        int port = std::get<0>(trackedObjects[i]);
-        enumTrackedObjectTypes myType = std::get<2>(trackedObjects[i]);
-
-        if (myType == enumTrackedObjectTypes::enStylus)
-        {
-            stylusPort = port;
-            toolIdx = i;
-        }
-    }
 
     trackerChannel->GetTrackedFrame(trackerFrame);
     transformRepository->SetTransforms(trackerFrame);
@@ -992,65 +760,10 @@ void basic_QtVTK::createLinearZStylusActor()
 
 }
 
-// Calculates rotation matrix to euler angles
-// The result is the same as MATLAB except the order
-// of the euler angles ( x and z are swapped ).
-double* basic_QtVTK::rotationMatrixToEulerAngles(vtkMatrix4x4* R)
-{
-
-    double* a = new double[3];
-
-    float sy = sqrt(R->Element[0][0]*R->Element[0][0] + R->Element[1][0] * R->Element[1][0]);
-
-    bool singular = sy < 1e-6; // If
-
-    float x, y, z;
-    if (!singular)
-    {
-        x = atan2(R->Element[2][1], R->Element[2][2]);
-        y = atan2(-R->Element[2][0], sy);
-        z = atan2(R->Element[1][0], R->Element[0][0]);
-    }
-    else
-    {
-        x = atan2(-R->Element[1][2], R->Element[1][1]);
-        y = atan2(-R->Element[2][0], sy);
-        z = 0;
-    }
-
-    a[0] = x;
-    a[1] = y;
-    a[2] = z;
-
-    return a;
-}
-
 void basic_QtVTK::collectDRR()
 {
 
-    vtkMatrix4x4* matr;
-
-    // If acceloremeter is tracking get orientation from volume rather then camera
-    //if (arduino && arduino->isConnected())
-    //{
-    //    matr = this->volume->GetMatrix();
-    //}
-    //else
-    //{
-        matr = this->ren->GetActiveCamera()->GetModelViewTransformMatrix();
-    //}
-    //vtkMatrix4x4* matr = this->volume->GetMatrix();
-    double *or1 = this->rotationMatrixToEulerAngles(matr);
-
-    qDebug() << "Camera Orientation: " << or1[0] << " " << or1[1] << " " << or1[2]; 
-   
-
-    this->ren2->RemoveActor(this->fluoroImage->ExportToVTK());
-    //this->fluoroImage->UpdateDRR(-or1[0], or1[1], or1[2]);
-    ITKFluoroImage *image2 = new ITKFluoroImage("C:\\users\\danie\\documents\\CTChest.mha", -or1[0], or1[1], or1[2]);
-
-    this->ren2->AddActor(this->fluoroImage->ExportToVTK());
-    this->openGLWidget2->GetRenderWindow()->Render();
+    LOG_INFO("Collect DRR Button not implemented in this version\n");
 
 }
 
@@ -1059,68 +772,50 @@ void basic_QtVTK::collectDRR()
 */
 void basic_QtVTK::collectSinglePointPhantom()
 {
-    if (1) /*!< Make sure the stylus is calibrated first */
+    if (!myNDITracker->IsRecording())
     {
-        if (myTracker->IsRecording()) /*!< Make sure the traker is tracking */
-        {
-            if (1 /*tools[0]->IsOutOfView == 0 && tools[1]->IsOutOfView == 0*/)  /*! make sure both items are visible */
-            {
-                vtkNew<vtkTransform> transform;
-                
-                vtkNew<vtkTransform> stylusTransform;
-                vtkNew<vtkTransform> refTransform;
-                stylusTransform->SetMatrix(stylusTipToTracker);
-                refTransform->SetMatrix(referenceToTracker);
-
-                transform->PostMultiply();
-                transform->Identity();
-                transform->Concatenate(stylusTransform);
-                transform->Concatenate(refTransform->GetLinearInverse());
-                transform->Update();
-
-                double pos[3];
-                transform->GetPosition(pos);
-                std::cout << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
-                targetPoints->InsertNextPoint(pos[0], pos[1], pos[2]);
-                targetPoints->Modified();
-                numCollected->display((int)targetPoints->GetNumberOfPoints());
-            }
-            else
-            {
-                statusBar()->showMessage(tr("One item or both is not visible"), 5000);
-            }
-        }
-        else
-        {
-            statusBar()->showMessage(tr("Tracker not tracking"), 5000);
-        }
+        LOG_ERROR("NDI Tracker not recording");
+        return;
     }
-    else
-    {
-        statusBar()->showMessage(tr("Stylus NOT calibrated"), 5000);
-    }
+    
+    // If either tool is out of view, return false
+    vtkNew<vtkTransform> transform;               
+    vtkNew<vtkTransform> stylusTransform;
+    vtkNew<vtkTransform> refTransform;
+    stylusTransform->SetMatrix(stylusTipToTracker);
+    refTransform->SetMatrix(referenceToTracker);
+
+    transform->PostMultiply();
+    transform->Identity();
+    transform->Concatenate(stylusTransform);
+    transform->Concatenate(refTransform->GetLinearInverse());
+    transform->Update();
+
+    double pos[3];
+    transform->GetPosition(pos);
+    std::cout << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
+    targetPoints->InsertNextPoint(pos[0], pos[1], pos[2]);
+    targetPoints->Modified();
+    numCollected->display((int)targetPoints->GetNumberOfPoints());
 }
 
 
 void basic_QtVTK::resetPhantomCollectedPoints()
 {
-
-    qDebug() << "reset";
+    LOG_INFO("reset");
 }
 
 
 void basic_QtVTK::deleteOnePhantomCollectedPoints()
 {
 
-    qDebug() << "delete";
-    this->ren2->RemoveActor(this->fluoroImage->ExportToVTK());
-    this->openGLWidget2->GetRenderWindow()->Render();
+    LOG_INFO("delete");
 }
 
 
 void basic_QtVTK::performPhantomRegistration()
 {
-    qDebug() << "register";
+    LOG_INFO("register");
 
     vtkNew<vtkTransform> refTransform;
     refTransform->SetMatrix(referenceToTracker);
@@ -1145,7 +840,7 @@ void basic_QtVTK::performPhantomRegistration()
 
 }
 
-void basic_QtVTK::setCameraUsingTracker()
+void basic_QtVTK::setCameraUsingNDITracker()
 {
 
     double zdir[4] = { 0.0, 0.0, -1.0, 0.0 };
@@ -1173,4 +868,34 @@ void basic_QtVTK::setCameraUsingTracker()
     //ren->GetActiveCamera()->SetFocalPoint(phantomOrig[0], phantomOrig[1], phantomOrig[2]);
     
 
+}
+
+void basic_QtVTK::setCameraUsingWitMotionTracker()
+{
+    // these don't change so they don't need to be initialized every update
+    double m[16] = { 0,1,0,0,
+        0,0,1,0,
+        1,0,0,0,
+        0,0,0,1 };
+    double up[4] = { 1,0,0,0 };
+    double out[4];
+
+
+    vtkNew<vtkMatrix4x4> mym4x4;
+    mym4x4->DeepCopy(m);
+
+    vtkNew<vtkTransform> cameraTransform;
+    cameraTransform->PostMultiply();
+    cameraTransform->Identity();
+    cameraTransform->Translate(0, 0, -500);
+    cameraTransform->Concatenate(accelerometerToTracker);
+    cameraTransform->Concatenate(mym4x4);
+    cameraTransform->Translate(0, 0, -174);
+    cameraTransform->Update();
+
+    this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
+
+    cameraTransform->MultiplyPoint(up, out);
+    this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
+    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, -174);
 }

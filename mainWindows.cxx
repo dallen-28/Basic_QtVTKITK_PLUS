@@ -116,6 +116,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <vtkPlusDataSource.h>
 #include <vtkPlusProbeCalibrationAlgo.h>
 #include <vtkPlusMicrochipTracker.h>
+#include <vtkPlusWitMotionTracker.h>
 
 
 // system
@@ -314,7 +315,7 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
     referenceToTrackerName.SetTransformName("ReferenceToTracker");
     stylusTipToReferenceName.SetTransformName("StylusTipToReference");
     stylusTipToTrackerName.SetTransformName("StylusTipToTracker");
-    accelerometerToTrackerName.SetTransformName("AccelerometerToTracker");
+    accelerometerToTrackerName.SetTransformName("AccelToTracker");
 }
 
 
@@ -349,7 +350,7 @@ void basic_QtVTK::startTracker(bool checked)
             if (myTracker == NULL)
             {
                 LOG_INFO("Tracking device is not NDI Polaris.");
-                myAccelerometer = dynamic_cast<vtkPlusMicrochipTracker*>(trackerDevice);
+                myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice);
                 
             }
       
@@ -482,11 +483,7 @@ void basic_QtVTK::updateTrackerInfo()
         this->volume->SetUserMatrix(accelerometerToTracker);
         this->openGLWidget->GetRenderWindow()->Render();
 
-
-
         //this->volume->SetUserMatrix(stylusToTracker);
-
-
         /*for (int i = 0; i < (int)trackedObjects.size(); i++)
         {
             if (tools[i]->IsMissing())

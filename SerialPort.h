@@ -9,9 +9,6 @@
 #ifndef SERIALPORT_H
 #define SERIALPORT_H
 
-#define ARDUINO_WAIT_TIME 2000
-#define MAX_DATA_LENGTH 255
-
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +20,11 @@ private:
     bool connected;
     COMSTAT status;
     DWORD errors;
+
+protected:
+    static const int MAX_DATA_LENGTH1 = 255;
+    static const int ARDUINO_WAIT_TIME = 2000;
+
 public:
     SerialPort(char *portName);
     ~SerialPort();

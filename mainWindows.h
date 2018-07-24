@@ -104,6 +104,7 @@ class vtkPlusTransformRepository;
 class vtkPlusDataCollector;
 class vtkPlusDataSource;
 class vtkPlusMicrochipTracker;
+class vtkPlusWitMotionTracker;
 class vtkPlusGenericSerialDevice;
 
 class QTimer;
@@ -216,7 +217,7 @@ private:
 
     // Tracker Devices
     vtkPlusNDITracker                                   *myTracker;
-    vtkPlusMicrochipTracker                             *myAccelerometer;
+    vtkPlusWitMotionTracker                             *myAccelerometer;
     vtkPlusDevice                                       *trackerDevice;
 
     // Tracker Related Objects

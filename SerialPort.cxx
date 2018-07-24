@@ -47,7 +47,7 @@ SerialPort::SerialPort(char *portName)
             else {
                 this->connected = true;
                 PurgeComm(this->handler, PURGE_RXCLEAR | PURGE_TXCLEAR);
-                Sleep(ARDUINO_WAIT_TIME);
+                Sleep(SerialPort::ARDUINO_WAIT_TIME);
             }
         }
     }

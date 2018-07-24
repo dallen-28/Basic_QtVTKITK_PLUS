@@ -337,7 +337,7 @@ void basic_QtVTK::startTracker(bool checked)
         // if tracker is not initialized, do so now
         if (!isTrackerInitialized)
         {
-            // Get tracker
+            // Get tracker1
             if (dataCollector->GetDevice(trackerDevice, "TrackerDevice") != PLUS_SUCCESS)
             {
                 LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice\". Check config file.");
@@ -409,7 +409,7 @@ void basic_QtVTK::startTracker(bool checked)
     trackerTimer = new QTimer(this);
     connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
     trackerTimer->start(0);
-  
+    // test commitasd
 }
 
 
@@ -477,10 +477,39 @@ void basic_QtVTK::updateTrackerInfo()
             return;
 
         }
+
+
         // Else Device is GenericSerial
         bool isValid = false;
         transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
-        this->volume->SetUserMatrix(accelerometerToTracker);
+
+        double m[16] = { 0,1,0,0,
+            0,0,1,0,
+            1,0,0,0,
+            0,0,0,1 };
+
+        vtkNew<vtkMatrix4x4> mym4x4;
+        mym4x4->DeepCopy(m);
+
+        vtkNew<vtkTransform> cameraTransform;
+        cameraTransform->PostMultiply();
+        cameraTransform->Identity();
+        cameraTransform->Translate(0, 0, -500);
+        cameraTransform->Concatenate(accelerometerToTracker);
+        //cameraTransform->SetMatrix(accelerometerToTracker);
+        //cameraTransform->Translate(0, 0, -135);
+        cameraTransform->Concatenate(mym4x4);
+        cameraTransform->Translate(0, 0, -174);
+        cameraTransform->Update();
+
+        this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
+        double up[4] = { 1,0,0,0 };
+        double out[4];
+        cameraTransform->MultiplyPoint(up, out);
+        this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
+        this->ren->GetActiveCamera()->SetFocalPoint(0, 0, -174);
+
+        //this->volume->SetUserMatrix(accelerometerToTracker);
         this->openGLWidget->GetRenderWindow()->Render();
 
         //this->volume->SetUserMatrix(stylusToTracker);

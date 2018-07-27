@@ -117,6 +117,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <vtkPlusProbeCalibrationAlgo.h>
 #include <vtkPlusMicrochipTracker.h>
 #include <vtkPlusWitMotionTracker.h>
+#include <vtkPlusVirtualMixer.h>
 
 
 // system
@@ -173,7 +174,14 @@ void basic_QtVTK::createVTKObjects()
 {
 
     volume = vtkSmartPointer<vtkVolume>::New();
+    fluoroVolume = vtkSmartPointer<vtkVolume>::New();
+    cameraTransform = vtkSmartPointer<vtkTransform>::New();
+    camera2Transform = vtkSmartPointer<vtkTransform>::New();
+
     myNDITracker = vtkSmartPointer< vtkPlusNDITracker >::New();
+    myAccelerometer = vtkSmartPointer<vtkPlusWitMotionTracker>::New();
+    myAccelerometer2 = vtkSmartPointer<vtkPlusWitMotionTracker>::New();
+    myMixer = vtkSmartPointer<vtkPlusVirtualMixer>::New();
 
     ren = vtkSmartPointer<vtkRenderer>::New();
     ren2 = vtkSmartPointer<vtkRenderer>::New();
@@ -195,6 +203,14 @@ void basic_QtVTK::createVTKObjects()
     stylusTipToReference = vtkSmartPointer<vtkMatrix4x4>::New();
     stylusTipToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
     accelerometerToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    accelerometer2ToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    accelerometerToCT = vtkSmartPointer<vtkMatrix4x4>::New();
+    double m[16] = { 0,1,0,0,
+        0,0,1,0,
+        1,0,0,0,
+        0,0,0,1 };
+    accelerometerToCT->DeepCopy(m);
+
 }
 
 
@@ -220,7 +236,9 @@ void basic_QtVTK::setupVTKObjects()
 
     // VTK Renderer
     ren->SetBackground(.1, .2, .4);
-    ren2->SetBackground(1, 1, 1);
+
+    // Set to white for Fluoro Image
+    ren2->SetBackground(.9, .9, .9);
 
     // connect VTK with Qt
     this->openGLWidget->GetRenderWindow()->AddRenderer(ren);
@@ -287,6 +305,7 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
     stylusTipToReferenceName.SetTransformName("StylusTipToReference");
     stylusTipToTrackerName.SetTransformName("StylusTipToTracker");
     accelerometerToTrackerName.SetTransformName("AccelToTracker");
+    accelerometer2ToTrackerName.SetTransformName("AccelToTracker2");
 }
 
 
@@ -318,6 +337,25 @@ void basic_QtVTK::startTracker(bool checked)
                 myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice);
                 
             }
+
+            // Get Tracker2
+            if (dataCollector->GetDevice(trackerDevice2, "TrackerDevice2") != PLUS_SUCCESS)
+            {
+                LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice2\". Check config file.");
+                exit;
+            }
+
+            myAccelerometer2 = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice2);
+
+            // Get Mixer
+            if (dataCollector->GetDevice(mixerDevice, "TrackedVideoDevice") != PLUS_SUCCESS)
+            {
+                LOG_ERROR("Unable to locate the device with ID = \"TrackerVideoDevice\". Check config file.");
+                exit;
+            }
+
+            myMixer = dynamic_cast<vtkPlusVirtualMixer*>(mixerDevice);
+
       
             // Connect to devices
             //std::cout << "Connecting to Device through COM" << myTracker->GetSerialPort();
@@ -347,17 +385,34 @@ void basic_QtVTK::startTracker(bool checked)
             }
             else
             {
-                if (myAccelerometer->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
+                if (myMixer->GetOutputChannelByName(trackerChannel, "MergedChannel") != PLUS_SUCCESS)
                 {
-                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
+                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerChannel\". Check config file.");
                     exit(EXIT_FAILURE);
                 }
+                // Get InputChannels
+                /*if (myAccelerometer->GetOutputChannelByName(trackerChannel, "TrackerChannel") != PLUS_SUCCESS)
+                {
+                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerChannel\". Check config file.");
+                    exit(EXIT_FAILURE);
+                }
+                if (myAccelerometer2->GetOutputChannelByName(trackerChannel2, "TrackerChannel2") != PLUS_SUCCESS)
+                {
+                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerChannel2\". Check config file.");
+                    exit(EXIT_FAILURE);
+                }*/
+                
+                
             }
          
             //myTracker->SetBaudRate(115200); /*!< Set the baud rate sufficiently high. */
             //int nMax = myTracker->GetNumberOfTools();
         }
     }
+
+    // Set Camera FocalPoint
+    this->ren->GetActiveCamera()->SetFocalPoint(0, -100, -174);
+    this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, -174);
 
     myAccelerometer->SetBaudRate(19200);
 
@@ -375,6 +430,7 @@ void basic_QtVTK::startTracker(bool checked)
     connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
     trackerTimer->start(0);
     // test commitasd
+
 }
 
 
@@ -393,9 +449,25 @@ void basic_QtVTK::updateTrackerInfo()
         
     bool isValid = false;
     transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
+    transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid);
 
+
+    /*cameraTransform->Identity();
+    cameraTransform->PostMultiply();
+    cameraTransform->Translate(0, 0, 174);
+    cameraTransform->Concatenate(accelerometerToTracker);
+    camera2Transform->Identity();
+    camera2Transform->PostMultiply();
+    camera2Transform->Translate(0, 0, 174);
+    camera2Transform->Concatenate(accelerometer2ToTracker);
+    volume->SetUserTransform(cameraTransform);
+    fluoroVolume->SetUserTransform(camera2Transform);*/
+
+    this->setCamera2UsingWitMotionTracker();
     this->setCameraUsingWitMotionTracker();
+    
     this->openGLWidget->GetRenderWindow()->Render();
+    this->openGLWidget2->GetRenderWindow()->Render();
 
 }
 
@@ -485,7 +557,7 @@ void basic_QtVTK::loadMesh()
 
     if (knownFileType)
     {
-        // do something only if we know the file type
+        // For Fluoro Volume
         vtkNew<vtkPolyDataMapper> mapper;
         vtkNew<vtkSmartVolumeMapper> volumeMapper;
         vtkNew<vtkVolumeProperty> property;
@@ -513,32 +585,49 @@ void basic_QtVTK::loadMesh()
 
         property->ShadeOff();
 
+        // For Volume
+        vtkNew<vtkSmartVolumeMapper> volumeMapper2;
+        vtkNew<vtkVolumeProperty> property2;
+        vtkNew<vtkColorTransferFunction> colorFun2;
+        vtkNew<vtkPiecewiseFunction> opacityFun2;
 
-        /*colorFun->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
-        colorFun->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
-        colorFun->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);*/
+        property2->SetColor(colorFun2);
+        property2->SetScalarOpacity(opacityFun2);
+        property2->SetInterpolationTypeToLinear();
 
-        /*opacityFun->AddPoint(-3024, 0, 0.5, 0.0);
-        opacityFun->AddPoint(-16, 0, .49, .61);
-        opacityFun->AddPoint(641, .72, .5, 0.0);
-        opacityFun->AddPoint(3071, .71, 0.5, 0.0);
+        colorFun2->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
+        colorFun2->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
+        colorFun2->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
 
-        volumeMapper->SetBlendModeToComposite();
-        property->ShadeOn();
-        property->SetAmbient(0.1);
-        property->SetDiffuse(0.9);
-        property->SetSpecular(0.2);
-        property->SetSpecularPower(10.0);
-        property->SetScalarOpacityUnitDistance(0.8919);*/
+        opacityFun2->AddPoint(-3024, 0, 0.5, 0.0);
+        opacityFun2->AddPoint(-16, 0, .49, .61);
+        opacityFun2->AddPoint(641, .72, .5, 0.0);
+        opacityFun2->AddPoint(3071, .71, 0.5, 0.0);
+
+        volumeMapper2->SetBlendModeToComposite();
+        property2->ShadeOn();
+        property2->SetAmbient(0.1);
+        property2->SetDiffuse(0.9);
+        property2->SetSpecular(0.2);
+        property2->SetSpecularPower(10.0);
+        property2->SetScalarOpacityUnitDistance(0.8919);
 
         if (info.suffix() == QString(tr("mha")))
         {
             volumeMapper->SetInputConnection(reader->GetOutputPort());
+            volumeMapper2->SetInputConnection(reader->GetOutputPort());
 
-            volume->SetMapper(volumeMapper);
-            volume->SetProperty(property);
-            //ren->AddVolume(volume);
-            ren2->AddVolume(volume);
+            volume->SetMapper(volumeMapper2);
+            fluoroVolume->SetMapper(volumeMapper);
+
+            volume->SetProperty(property2);
+            fluoroVolume->SetProperty(property);
+
+            volume->SetOrientation(0, 0, 180);
+            fluoroVolume->SetOrientation(0, 0, 180);
+
+            ren->AddVolume(volume);
+            ren2->AddVolume(fluoroVolume);
         }
         
         else
@@ -872,24 +961,11 @@ void basic_QtVTK::setCameraUsingNDITracker()
 
 void basic_QtVTK::setCameraUsingWitMotionTracker()
 {
-    // these don't change so they don't need to be initialized every update
-    double m[16] = { 0,1,0,0,
-        0,0,1,0,
-        1,0,0,0,
-        0,0,0,1 };
-    double up[4] = { 1,0,0,0 };
-    double out[4];
-
-
-    vtkNew<vtkMatrix4x4> mym4x4;
-    mym4x4->DeepCopy(m);
-
-    vtkNew<vtkTransform> cameraTransform;
     cameraTransform->PostMultiply();
     cameraTransform->Identity();
-    cameraTransform->Translate(0, 0, -500);
+    cameraTransform->Translate(0, 0, -800);
     cameraTransform->Concatenate(accelerometerToTracker);
-    cameraTransform->Concatenate(mym4x4);
+    cameraTransform->Concatenate(accelerometerToCT);
     cameraTransform->Translate(0, 0, -174);
     cameraTransform->Update();
 
@@ -897,5 +973,27 @@ void basic_QtVTK::setCameraUsingWitMotionTracker()
 
     cameraTransform->MultiplyPoint(up, out);
     this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
-    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, -174);
+
+    //this->ren->GetActiveCamera()->SetFocalPoint(0, -100, -174);
+    //this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, -174);
+
+}
+void basic_QtVTK::setCamera2UsingWitMotionTracker()
+{
+    camera2Transform->PostMultiply();
+    camera2Transform->Identity();
+    camera2Transform->Translate(0, 0, -800);
+    camera2Transform->Concatenate(accelerometer2ToTracker);
+    camera2Transform->Concatenate(accelerometerToCT);
+    camera2Transform->Translate(0, 0, -174);
+    camera2Transform->Update();
+
+    this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
+
+    camera2Transform->MultiplyPoint(up, out);
+    this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
+
+    //this->ren->GetActiveCamera()->SetFocalPoint(0, -100, -174);
+    //this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, -174);
+
 }

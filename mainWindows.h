@@ -86,6 +86,7 @@ class vtkMatrix4x4;
 class vtkPlusNDITracker;
 class vtkPlusTracker;
 class vtkPlusDevice;
+class vtkPlusVirtualMixer;
 class vtkPlusChannel;
 class vtkPlusTransformRepository;
 class PlusTrackedFrame;
@@ -162,6 +163,7 @@ public:
     void performPhantomRegistration();
     void setCameraUsingNDITracker();
     void setCameraUsingWitMotionTracker();
+    void setCamera2UsingWitMotionTracker();
 
     void aboutThisProgram();
 
@@ -201,23 +203,32 @@ private:
     vtkSmartPointer<vtkActor>                           stylusActor;
     vtkSmartPointer<vtkActor>                           actor;
     vtkSmartPointer<vtkVolume>                          volume;
+    vtkSmartPointer<vtkVolume>                          fluoroVolume;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow>       renWin;
     vtkSmartPointer<vtkRenderer>                        ren;
     vtkSmartPointer<vtkRenderer>                        ren2;
     vtkSmartPointer<vtkImageCanvasSource2D>             trackerDrawing;
     vtkSmartPointer<vtkLogoRepresentation>              trackerLogoRepresentation;
     vtkSmartPointer<vtkLogoWidget>                      trackerLogoWidget;
+    vtkSmartPointer<vtkTransform>                       cameraTransform;
+    vtkSmartPointer<vtkTransform>                       camera2Transform;
 
     // Tracker Devices
     vtkPlusNDITracker                                   *myNDITracker;
     vtkPlusWitMotionTracker                             *myAccelerometer;
+    vtkPlusWitMotionTracker                             *myAccelerometer2;
+    vtkPlusVirtualMixer                                 *myMixer;
     vtkPlusDevice                                       *trackerDevice;
+    vtkPlusDevice                                       *trackerDevice2;
+    vtkPlusDevice                                       *mixerDevice;
 
     // Tracker Related Objects
     vtkSmartPointer<vtkPlusDataCollector>               dataCollector;
     vtkSmartPointer<vtkPlusTransformRepository>         transformRepository;
     vtkPlusChannel                                      *trackerChannel;
+    vtkPlusChannel                                      *trackerChannel2;
     PlusTrackedFrame                                    trackerFrame;
+    PlusTrackedFrame                                    trackerFrame2;
 
     // Transform Names
     PlusTransformName                                   stylusToTrackerName;
@@ -225,9 +236,14 @@ private:
     PlusTransformName                                   stylusTipToReferenceName;
     PlusTransformName                                   stylusTipToTrackerName;
     PlusTransformName                                   accelerometerToTrackerName;
+    PlusTransformName                                   accelerometer2ToTrackerName;
 
     // Transforms
     vtkSmartPointer<vtkMatrix4x4>                       accelerometerToTracker;
+    vtkSmartPointer<vtkMatrix4x4>                       accelerometer2ToTracker;
+    vtkSmartPointer<vtkMatrix4x4>                       accelerometerToCT;
+    double up[4] = { 1,0,0,0 };
+    double out[4];
     vtkSmartPointer<vtkMatrix4x4>                       stylusToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       referenceToTracker;       
     vtkSmartPointer<vtkMatrix4x4>                       stylusTipToReference;

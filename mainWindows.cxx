@@ -316,6 +316,14 @@ void basic_QtVTK::startTracker(bool checked)
     // Put below code into method such as follows:
     // this->DataCollector->SetUpDevices(m_configFile);
 
+    arduinoTracker1 = new ArduinoTracker("\\\\.\\COM9");
+    //arduinoTracker2 = new ArduinoTracker("\\\\.\\COM10");
+    // create a QTimer
+    trackerTimer = new QTimer(this);
+    connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
+    trackerTimer->start(0);
+    return;
+
     if (checked)
     {
         // if tracker is not initialized, do so now
@@ -438,7 +446,7 @@ void basic_QtVTK::updateTrackerInfo()
 {
     // this->DataCollector->UpdateTrackerInfo();
     /* */
-    if (!isTrackerInitialized)
+    /*if (!isTrackerInitialized)
     {
         LOG_ERROR("Attempting to update Tracker when tracker is not initialized");
         exit(EXIT_FAILURE);
@@ -449,22 +457,32 @@ void basic_QtVTK::updateTrackerInfo()
         
     bool isValid = false;
     transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
-    transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid);
+    transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid);*/
 
+    this->arduinoTracker1->ReceiveData();
+    //this->arduinoTracker2->ReceiveData();
 
-    /*cameraTransform->Identity();
+    cameraTransform->Identity();
     cameraTransform->PostMultiply();
     cameraTransform->Translate(0, 0, 174);
-    cameraTransform->Concatenate(accelerometerToTracker);
-    camera2Transform->Identity();
+    cameraTransform->RotateX(this->arduinoTracker1->orientation[0]);
+    cameraTransform->RotateY(this->arduinoTracker1->orientation[1]);
+    //cameraTransform->RotateZ(this->arduinoTracker1->orientation[2]);
+    //cameraTransform->Concatenate(accelerometerToTracker);
+
+    /*camera2Transform->Identity();
     camera2Transform->PostMultiply();
     camera2Transform->Translate(0, 0, 174);
-    camera2Transform->Concatenate(accelerometer2ToTracker);
-    volume->SetUserTransform(cameraTransform);
-    fluoroVolume->SetUserTransform(camera2Transform);*/
+    camera2Transform->RotateX(this->arduinoTracker2->orientation[0]);
+    camera2Transform->RotateY(this->arduinoTracker2->orientation[1]);
+    //camera2Transform->RotateZ(this->arduinoTracker2->orientation[2]);
+    //camera2Transform->Concatenate(accelerometer2ToTracker);*/
 
-    this->setCamera2UsingWitMotionTracker();
-    this->setCameraUsingWitMotionTracker();
+    volume->SetUserTransform(cameraTransform);
+    //fluoroVolume->SetUserTransform(camera2Transform);
+
+    //this->setCamera2UsingWitMotionTracker();
+    //this->setCameraUsingWitMotionTracker();
     
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
@@ -980,12 +998,19 @@ void basic_QtVTK::setCameraUsingWitMotionTracker()
 }
 void basic_QtVTK::setCamera2UsingWitMotionTracker()
 {
+    vtkNew<vtkTransform> tran;
+    tran->Identity();
+    tran->PostMultiply();
+    double *a = rotationMatrixToEulerAngles(accelerometer2ToTracker);
+    a[1] = a[1] * 180 / M_PI;
+
     camera2Transform->PostMultiply();
     camera2Transform->Identity();
     camera2Transform->Translate(0, 0, -800);
-    camera2Transform->Concatenate(accelerometer2ToTracker);
+    camera2Transform->Concatenate(accelerometerToTracker);
     camera2Transform->Concatenate(accelerometerToCT);
     camera2Transform->Translate(0, 0, -174);
+    camera2Transform->Translate(0, 0, a[1]);
     camera2Transform->Update();
 
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
@@ -996,4 +1021,36 @@ void basic_QtVTK::setCamera2UsingWitMotionTracker()
     //this->ren->GetActiveCamera()->SetFocalPoint(0, -100, -174);
     //this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, -174);
 
+}
+// Calculates rotation matrix to euler angles
+// The result is the same as MATLAB except the order
+// of the euler angles ( x and z are swapped ).
+double* basic_QtVTK::rotationMatrixToEulerAngles(vtkMatrix4x4* R)
+{
+
+  double* a = new double[3];
+
+  float sy = sqrt(R->Element[0][0] * R->Element[0][0] + R->Element[1][0] * R->Element[1][0]);
+
+  bool singular = sy < 1e-6; // If
+
+  float x, y, z;
+  if (!singular)
+  {
+    x = atan2(R->Element[2][1], R->Element[2][2]);
+    y = atan2(-R->Element[2][0], sy);
+    z = atan2(R->Element[1][0], R->Element[0][0]);
+  }
+  else
+  {
+    x = atan2(-R->Element[1][2], R->Element[1][1]);
+    y = atan2(-R->Element[2][0], sy);
+    z = 0;
+  }
+
+  a[0] = x;
+  a[1] = y;
+  a[2] = z;
+
+  return a;
 }

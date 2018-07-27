@@ -164,6 +164,7 @@ public:
     void setCameraUsingNDITracker();
     void setCameraUsingWitMotionTracker();
     void setCamera2UsingWitMotionTracker();
+    double *rotationMatrixToEulerAngles(vtkMatrix4x4* R);
 
     void aboutThisProgram();
 
@@ -238,6 +239,9 @@ private:
     PlusTransformName                                   accelerometerToTrackerName;
     PlusTransformName                                   accelerometer2ToTrackerName;
 
+    // ArduinoTracker
+    ArduinoTracker *arduinoTracker1;
+    ArduinoTracker *arduinoTracker2;
     // Transforms
     vtkSmartPointer<vtkMatrix4x4>                       accelerometerToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       accelerometer2ToTracker;

@@ -19,7 +19,7 @@ void ArduinoTracker::ReceiveData()
     usRxLength += usLength;
     while (usRxLength >= 11)
     {
-        memcpy_s(incomingDataTemp, 1000, incomingData, 1000);
+        /*memcpy_s(incomingDataTemp, 1000, incomingData, 1000);
         if (!((incomingDataTemp[0] == 0x55) & ((incomingDataTemp[1] & 0x50) == 0x50)))
         {
             for (int i = 1; i < usRxLength; i++) incomingData[i - 1] = incomingData[i];
@@ -29,8 +29,8 @@ void ArduinoTracker::ReceiveData()
         if (((incomingDataTemp[0] + incomingDataTemp[1] + incomingDataTemp[2] + incomingDataTemp[3] + incomingDataTemp[4] + incomingDataTemp[5] + incomingDataTemp[6] + incomingDataTemp[7] + incomingDataTemp[8] + incomingDataTemp[9]) & 0xff) == incomingDataTemp[10])
         {
             this->DecodeData();
-        }
-           
+        }*/
+        this->DecodeData();
         for (int i = 11; i < usRxLength; i++)
         {
             incomingData[i - 11] = incomingData[i];
@@ -54,6 +54,7 @@ void ArduinoTracker::DecodeData()
         orientation[0] = orientation[0] / 32768.0 * 180;
         orientation[1] = orientation[1] / 32768.0 * 180;
         orientation[2] = orientation[2] / 32768.0 * 180;
+        printf("%f %f %f\n", orientation[0], orientation[1], orientation[2]);
     }
 }
 

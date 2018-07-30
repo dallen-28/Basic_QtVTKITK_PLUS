@@ -301,10 +301,10 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
     }
 
     // Set transform names
-    stylusToTrackerName.SetTransformName("StylusToTracker");
-    referenceToTrackerName.SetTransformName("ReferenceToTracker");
+    stylusToTrackerName.SetTransformName("StylusToTracker3");
+    referenceToTrackerName.SetTransformName("ReferenceToTracker3");
     stylusTipToReferenceName.SetTransformName("StylusTipToReference");
-    stylusTipToTrackerName.SetTransformName("StylusTipToTracker");
+    stylusTipToTrackerName.SetTransformName("StylusTipToTracker3");
     accelerometerToTrackerName.SetTransformName("AccelToTracker");
     accelerometer2ToTrackerName.SetTransformName("AccelToTracker2");
 }
@@ -324,6 +324,18 @@ void basic_QtVTK::startTracker(bool checked)
     connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
     trackerTimer->start(0);
     return;*/
+    
+    /*vtkSmartPointer<vtkCylinderSource> cylinder = vtkSmartPointer<vtkCylinderSource>::New();
+    cylinder->SetHeight(1000);
+    cylinder->SetRadius(0.5);
+    cylinder->Setcol
+    vtkSmartPointer<vtkPolyDataMapper> map = vtkSmartPointer<vtkPolyDataMapper>::New();
+    map->SetInputConnection(cylinder->GetOutputPort());
+    stylusActor->SetMapper(map);*/
+
+    //this->ren->AddActor(stylusActor);
+    //this->ren2->AddActor(stylusActor);
+    
 
     if (checked)
     {
@@ -331,21 +343,29 @@ void basic_QtVTK::startTracker(bool checked)
         if (!isTrackerInitialized)
         {
             // Get tracker1
-            if (dataCollector->GetDevice(trackerDevice, "TrackerDevice") != PLUS_SUCCESS)
+            if (dataCollector->GetDevice(trackerDevice3, "TrackerDevice3") != PLUS_SUCCESS)
             {
                 LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice\". Check config file.");
                 exit;
             }
 
             // Cast Device to type vtkPlusNDITracker
-            myNDITracker = dynamic_cast<vtkPlusNDITracker*>(trackerDevice);
+            myNDITracker = dynamic_cast<vtkPlusNDITracker*>(trackerDevice3);
 
             if (myNDITracker == NULL)
             {
-                LOG_INFO("Tracking device is not NDI Polaris.");
-                myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice);
+                LOG_INFO("Unable to Connect to NDI Polaris Tracker.");
+                
                 
             }
+
+            // Get tracker1
+            if (dataCollector->GetDevice(trackerDevice, "TrackerDevice") != PLUS_SUCCESS)
+            {
+              LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice\". Check config file.");
+              exit;
+            }
+            myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice);
 
             // Get Tracker2
             if (dataCollector->GetDevice(trackerDevice2, "TrackerDevice2") != PLUS_SUCCESS)
@@ -384,21 +404,13 @@ void basic_QtVTK::startTracker(bool checked)
                 LOG_ERROR("Configuration incorrect for vtkPlusTransformRepository.");
                 exit(EXIT_FAILURE);
             }
-            if (myNDITracker != NULL)
+          
+              
+            if (myMixer->GetOutputChannelByName(trackerChannel, "MergedChannel") != PLUS_SUCCESS)
             {
-                if (myNDITracker->GetOutputChannelByName(trackerChannel, "TrackerStream") != PLUS_SUCCESS)
-                {
-                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerStream\". Check config file.");
-                    exit(EXIT_FAILURE);
-                }
+                LOG_ERROR("Unable to locate the channel with Id=\"TrackerChannel\". Check config file.");
+                exit(EXIT_FAILURE);
             }
-            else
-            {
-                if (myMixer->GetOutputChannelByName(trackerChannel, "MergedChannel") != PLUS_SUCCESS)
-                {
-                    LOG_ERROR("Unable to locate the channel with Id=\"TrackerChannel\". Check config file.");
-                    exit(EXIT_FAILURE);
-                }
                 // Get InputChannels
                 /*if (myAccelerometer->GetOutputChannelByName(trackerChannel, "TrackerChannel") != PLUS_SUCCESS)
                 {
@@ -411,8 +423,7 @@ void basic_QtVTK::startTracker(bool checked)
                     exit(EXIT_FAILURE);
                 }*/
                 
-                
-            }
+               
          
             //myTracker->SetBaudRate(115200); /*!< Set the baud rate sufficiently high. */
             //int nMax = myTracker->GetNumberOfTools();
@@ -438,6 +449,7 @@ void basic_QtVTK::startTracker(bool checked)
     trackerTimer = new QTimer(this);
     connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
     trackerTimer->start(0);
+    createLinearZStylusActor();
     // test commitasd
 
 }
@@ -459,6 +471,21 @@ void basic_QtVTK::updateTrackerInfo()
     bool isValid = false;
     transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
     transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid);
+    transformRepository->GetTransform(stylusTipToReferenceName, stylusTipToReference, &isValid);
+    transformRepository->GetTransform(stylusTipToTrackerName, stylusTipToTracker, &isValid);
+    transformRepository->GetTransform(referenceToTrackerName, referenceToTracker, &isValid);
+
+    this->stylusActor->SetUserMatrix(stylusTipToReference);
+
+    /*vtkSmartPointer<vtkTransform> refTransform = vtkSmartPointer<vtkTransform>::New();
+    refTransform->SetMatrix(referenceToTracker);
+
+    phantomTransform->Identity();
+    phantomTransform->PostMultiply();
+    phantomTransform->Concatenate(phantomRegTransform->GetMatrix());
+    phantomTransform->Concatenate(refTransform);
+    volume->SetUserTransform(phantomTransform);*/
+  
 
     //this->arduinoTracker1->ReceiveData();
     //this->arduinoTracker2->ReceiveData();
@@ -480,8 +507,9 @@ void basic_QtVTK::updateTrackerInfo()
     volume->SetUserTransform(cameraTransform);
     //fluoroVolume->SetUserTransform(camera2Transform);*/
 
-    this->setCamera2UsingWitMotionTracker();
-    this->setCameraUsingWitMotionTracker();
+    //this->setCamera2UsingWitMotionTracker();
+    //this->setCameraUsingWitMotionTracker();
+    //this->setCameraUsingNDITracker();
     
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
@@ -640,10 +668,10 @@ void basic_QtVTK::loadMesh()
             volume->SetProperty(property2);
             fluoroVolume->SetProperty(property);
 
-            //volume->SetOrientation(0, 0, 180);
+            volume->SetOrientation(0, 0, 180);
             fluoroVolume->SetOrientation(0, 0, 180);
 
-            //ren->AddVolume(volume);
+            ren->AddVolume(volume);
             ren2->AddVolume(fluoroVolume);
         }
         
@@ -855,11 +883,12 @@ void basic_QtVTK::createLinearZStylusActor()
     stylusActor->SetUserTransform(tran);
 
     vtkNew<vtkNamedColors> color;
-    stylusActor->GetProperty()->SetColor(color->GetColor3d("zinc_white").GetRed(),
-        color->GetColor3d("zinc_white").GetGreen(),
-        color->GetColor3d("zinc_white").GetBlue());
+    stylusActor->GetProperty()->SetColor(color->GetColor3d("zinc_black").GetRed(),
+        color->GetColor3d("zinc_black").GetGreen(),
+        color->GetColor3d("zinc_black").GetBlue());
 
-    //ren->AddActor(stylusActor);
+    ren->AddActor(stylusActor);
+    ren2->AddActor(stylusActor);
 
     delete[] pos;
     delete[] outpt;
@@ -1018,7 +1047,7 @@ void basic_QtVTK::setCamera2UsingWitMotionTracker()
     camera2Transform->Translate(0, 0, -174);
     camera2Transform->Translate(0, 0, a[1] - 175);
     camera2Transform->Update();
-    //asd
+
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
     this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, a[1] - 175);
     camera2Transform->MultiplyPoint(up, out);

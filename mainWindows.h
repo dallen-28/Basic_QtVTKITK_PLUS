@@ -221,6 +221,7 @@ private:
     vtkPlusVirtualMixer                                 *myMixer;
     vtkPlusDevice                                       *trackerDevice;
     vtkPlusDevice                                       *trackerDevice2;
+    vtkPlusDevice                                       *trackerDevice3;
     vtkPlusDevice                                       *mixerDevice;
 
     // Tracker Related Objects

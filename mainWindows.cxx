@@ -175,6 +175,7 @@ void basic_QtVTK::createVTKObjects()
 
     volume = vtkSmartPointer<vtkVolume>::New();
     fluoroVolume = vtkSmartPointer<vtkVolume>::New();
+    actor = vtkSmartPointer<vtkActor>::New();
     cameraTransform = vtkSmartPointer<vtkTransform>::New();
     camera2Transform = vtkSmartPointer<vtkTransform>::New();
 
@@ -316,13 +317,13 @@ void basic_QtVTK::startTracker(bool checked)
     // Put below code into method such as follows:
     // this->DataCollector->SetUpDevices(m_configFile);
 
-    arduinoTracker1 = new ArduinoTracker("\\\\.\\COM9");
-    //arduinoTracker2 = new ArduinoTracker("\\\\.\\COM10");
+    /*arduinoTracker1 = new ArduinoTracker("\\\\.\\COM9");
+    arduinoTracker2 = new ArduinoTracker("\\\\.\\COM10");
     // create a QTimer
     trackerTimer = new QTimer(this);
     connect(trackerTimer, SIGNAL(timeout()), this, SLOT(updateTrackerInfo()));
     trackerTimer->start(0);
-    return;
+    return;*/
 
     if (checked)
     {
@@ -446,7 +447,7 @@ void basic_QtVTK::updateTrackerInfo()
 {
     // this->DataCollector->UpdateTrackerInfo();
     /* */
-    /*if (!isTrackerInitialized)
+    if (!isTrackerInitialized)
     {
         LOG_ERROR("Attempting to update Tracker when tracker is not initialized");
         exit(EXIT_FAILURE);
@@ -457,18 +458,16 @@ void basic_QtVTK::updateTrackerInfo()
         
     bool isValid = false;
     transformRepository->GetTransform(accelerometerToTrackerName, accelerometerToTracker, &isValid);
-    transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid);*/
+    transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid);
 
-    this->arduinoTracker1->ReceiveData();
+    //this->arduinoTracker1->ReceiveData();
     //this->arduinoTracker2->ReceiveData();
 
-    cameraTransform->Identity();
-    cameraTransform->PostMultiply();
-    cameraTransform->Translate(0, 0, 174);
-    cameraTransform->RotateX(this->arduinoTracker1->orientation[0]);
-    cameraTransform->RotateY(this->arduinoTracker1->orientation[1]);
-    //cameraTransform->RotateZ(this->arduinoTracker1->orientation[2]);
+    //cameraTransform->Identity();
+    //cameraTransform->PostMultiply();
+    //cameraTransform->Translate(0, 0, 174);
     //cameraTransform->Concatenate(accelerometerToTracker);
+    //cameraTransform->Concatenate(accelerometerToCT);
 
     /*camera2Transform->Identity();
     camera2Transform->PostMultiply();
@@ -476,13 +475,13 @@ void basic_QtVTK::updateTrackerInfo()
     camera2Transform->RotateX(this->arduinoTracker2->orientation[0]);
     camera2Transform->RotateY(this->arduinoTracker2->orientation[1]);
     //camera2Transform->RotateZ(this->arduinoTracker2->orientation[2]);
-    //camera2Transform->Concatenate(accelerometer2ToTracker);*/
+    //camera2Transform->Concatenate(accelerometer2ToTracker);
 
     volume->SetUserTransform(cameraTransform);
-    //fluoroVolume->SetUserTransform(camera2Transform);
+    //fluoroVolume->SetUserTransform(camera2Transform);*/
 
-    //this->setCamera2UsingWitMotionTracker();
-    //this->setCameraUsingWitMotionTracker();
+    this->setCamera2UsingWitMotionTracker();
+    this->setCameraUsingWitMotionTracker();
     
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
@@ -641,10 +640,10 @@ void basic_QtVTK::loadMesh()
             volume->SetProperty(property2);
             fluoroVolume->SetProperty(property);
 
-            volume->SetOrientation(0, 0, 180);
+            //volume->SetOrientation(0, 0, 180);
             fluoroVolume->SetOrientation(0, 0, 180);
 
-            ren->AddVolume(volume);
+            //ren->AddVolume(volume);
             ren2->AddVolume(fluoroVolume);
         }
         
@@ -979,16 +978,23 @@ void basic_QtVTK::setCameraUsingNDITracker()
 
 void basic_QtVTK::setCameraUsingWitMotionTracker()
 {
+    vtkNew<vtkTransform> tran;
+    tran->Identity();
+    tran->PostMultiply();
+    double *a = rotationMatrixToEulerAngles(accelerometer2ToTracker);
+    a[1] = a[1] * 180 / M_PI;
+
     cameraTransform->PostMultiply();
     cameraTransform->Identity();
     cameraTransform->Translate(0, 0, -800);
     cameraTransform->Concatenate(accelerometerToTracker);
     cameraTransform->Concatenate(accelerometerToCT);
     cameraTransform->Translate(0, 0, -174);
+    cameraTransform->Translate(0, 0, a[1] - 175);
     cameraTransform->Update();
 
     this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
-
+    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, a[1] - 175);
     cameraTransform->MultiplyPoint(up, out);
     this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
@@ -1010,11 +1016,11 @@ void basic_QtVTK::setCamera2UsingWitMotionTracker()
     camera2Transform->Concatenate(accelerometerToTracker);
     camera2Transform->Concatenate(accelerometerToCT);
     camera2Transform->Translate(0, 0, -174);
-    camera2Transform->Translate(0, 0, a[1]);
+    camera2Transform->Translate(0, 0, a[1] - 175);
     camera2Transform->Update();
 
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
-
+    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1] - 175);
     camera2Transform->MultiplyPoint(up, out);
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
@@ -1032,7 +1038,7 @@ double* basic_QtVTK::rotationMatrixToEulerAngles(vtkMatrix4x4* R)
 
   float sy = sqrt(R->Element[0][0] * R->Element[0][0] + R->Element[1][0] * R->Element[1][0]);
 
-  bool singular = sy < 1e-6; // If
+  bool singular = sy < 1e-6; 
 
   float x, y, z;
   if (!singular)

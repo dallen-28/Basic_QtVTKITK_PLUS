@@ -1018,7 +1018,7 @@ void basic_QtVTK::setCamera2UsingWitMotionTracker()
     camera2Transform->Translate(0, 0, -174);
     camera2Transform->Translate(0, 0, a[1] - 175);
     camera2Transform->Update();
-
+    //asd
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
     this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, a[1] - 175);
     camera2Transform->MultiplyPoint(up, out);

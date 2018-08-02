@@ -144,95 +144,27 @@ POSSIBILITY OF SUCH DAMAGES.
 // PI
 const float M_PI = 4 * atan(1);
 
-
-template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
-    vtkSmartPointer< PReader > reader =
-        vtkSmartPointer< PReader >::New();
-    reader->SetFileName(fname);
-    reader->Update();
-    reader->GetOutput()->Register(reader);
-    return(vtkPolyData::SafeDownCast(reader->GetOutput()));
-}
-
 basic_QtVTK::basic_QtVTK()
 {
     this->setupUi(this);
     this->trackerWidget->hide();
+    this->trackerButton->setDisabled(true);
 
-    createVTKObjects();
-    setupVTKObjects();
-    setupQTObjects();
+    SetupQTObjects();
 
-    ren->ResetCameraClippingRange();
+    this->Render();
+
+}
+void basic_QtVTK::Render()
+{
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
-
 }
 
-
-void basic_QtVTK::createVTKObjects()
+void basic_QtVTK::SetupVTKObjects()
 {
-
-    volume = vtkSmartPointer<vtkVolume>::New();
-    fluoroVolume = vtkSmartPointer<vtkVolume>::New();
-    actor = vtkSmartPointer<vtkActor>::New();
-    cameraTransform = vtkSmartPointer<vtkTransform>::New();
-    camera2Transform = vtkSmartPointer<vtkTransform>::New();
-
-    myNDITracker = vtkSmartPointer< vtkPlusNDITracker >::New();
-    myAccelerometer = vtkSmartPointer<vtkPlusWitMotionTracker>::New();
-    myAccelerometer2 = vtkSmartPointer<vtkPlusWitMotionTracker>::New();
-    myMixer = vtkSmartPointer<vtkPlusVirtualMixer>::New();
-
-    ren = vtkSmartPointer<vtkRenderer>::New();
-    ren2 = vtkSmartPointer<vtkRenderer>::New();
-    phantomRegTransform = vtkSmartPointer<vtkLandmarkTransform>::New();
-    phantomTransform = vtkSmartPointer<vtkTransform>::New();
-    targetPoints = vtkSmartPointer<vtkPoints>::New();
-    renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
-    stylusActor = vtkSmartPointer<vtkActor>::New();
-    trackerDrawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
-    trackerLogoRepresentation = vtkSmartPointer<vtkLogoRepresentation>::New();
-    trackerLogoWidget = vtkSmartPointer<vtkLogoWidget>::New();
-    
-    dataCollector = vtkSmartPointer<vtkPlusDataCollector>::New();
-    transformRepository = vtkSmartPointer<vtkPlusTransformRepository>::New();
-
-    // Initialize Transforms
-    stylusToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
-    referenceToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
-    stylusTipToReference = vtkSmartPointer<vtkMatrix4x4>::New();
-    stylusTipToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
-    accelerometerToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
-    accelerometer2ToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
-    accelerometerToCT = vtkSmartPointer<vtkMatrix4x4>::New();
-    double m[16] = { 0,1,0,0,
-        0,0,1,0,
-        1,0,0,0,
-        0,0,0,1 };
-    accelerometerToCT->DeepCopy(m);
-
-}
-
-
-void basic_QtVTK::cleanVTKObjects()
-{
-    // if needed
-    if (isTrackerInitialized)
-    {
-        myNDITracker->StopRecording();
-    }
-        
-}
-
-
-void basic_QtVTK::setupVTKObjects()
-{
-    // number of screenshot
-    screenShotFileNumber = 0;
 
     // tracker
-    this->isTrackerInitialized = isStylusCalibrated = false;
     this->openGLWidget->SetRenderWindow(renWin);
 
     // VTK Renderer
@@ -247,66 +179,44 @@ void basic_QtVTK::setupVTKObjects()
 }
 
 
-void basic_QtVTK::setupQTObjects()
+void basic_QtVTK::SetupQTObjects()
 {
-    connect(action_Background_Color, SIGNAL(triggered()), this, SLOT(editRendererBackgroundColor()));
-    connect(action_Quit, SIGNAL(triggered()), this, SLOT(slotExit()));
-    connect(actionLoad_Mesh, SIGNAL(triggered()), this, SLOT(loadMesh()));
-    connect(actionMesh_Color, SIGNAL(triggered()), this, SLOT(editMeshColor()));
-    connect(actionScreen_Shot, SIGNAL(triggered()), this, SLOT(screenShot()));
-    connect(actionthis_program, SIGNAL(triggered()), this, SLOT(aboutThisProgram()));
-    connect(trackerButton, SIGNAL(toggled(bool)), this, SLOT(startTracker(bool)));
-    connect(pivotButton, SIGNAL(toggled(bool)), this, SLOT(stylusCalibration(bool)));
-    connect(actionLoad_Fiducial, SIGNAL(triggered()), this, SLOT(loadFiducialPts()));
-    connect(resetPhantomPtButton, SIGNAL(clicked()), this, SLOT(resetPhantomCollectedPoints()));
-    connect(deleteOnePhantomPtButton, SIGNAL(clicked()), this, SLOT(deleteOnePhantomCollectedPoints()));
-    connect(phantomRegistrationButton, SIGNAL(clicked()), this, SLOT(performPhantomRegistration()));
-    connect(collectSinglePtButton, SIGNAL(clicked()), this, SLOT(collectSinglePointPhantom()));
-    connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(collectDRR()));
+    connect(action_Background_Color, SIGNAL(triggered()), this, SLOT(EditRendererBackgroundColor()));
+    connect(action_Quit, SIGNAL(triggered()), this, SLOT(SlotExit()));
+    connect(actionLoad_Mesh, SIGNAL(triggered()), this, SLOT(LoadMesh()));
+    connect(actionMesh_Color, SIGNAL(triggered()), this, SLOT(EditMeshColor()));
+    connect(actionScreen_Shot, SIGNAL(triggered()), this, SLOT(ScreenShot()));
+    connect(actionthis_program, SIGNAL(triggered()), this, SLOT(AboutThisProgram()));
+    connect(trackerButton, SIGNAL(toggled(bool)), this, SLOT(StartTracker(bool)));
+    connect(pivotButton, SIGNAL(toggled(bool)), this, SLOT(StylusCalibration(bool)));
+    connect(actionLoad_Fiducial, SIGNAL(triggered()), this, SLOT(LoadFiducialPts()));
+    connect(resetPhantomPtButton, SIGNAL(clicked()), this, SLOT(ResetPhantomCollectedPoints()));
+    connect(deleteOnePhantomPtButton, SIGNAL(clicked()), this, SLOT(DeleteOnePhantomCollectedPoints()));
+    connect(phantomRegistrationButton, SIGNAL(clicked()), this, SLOT(PerformPhantomRegistration()));
+    connect(collectSinglePtButton, SIGNAL(clicked()), this, SLOT(CollectSinglePointPhantom()));
+    connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(CollectDRR()));
 
     QPlusStatusIcon* statusIcon = new QPlusStatusIcon(NULL);
     statusIcon->SetMaxMessageCount(3000);
     statusbar->insertWidget(0, statusIcon);
 
     // QPlusDeviceSetSelectorWidget
-    m_DeviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
-    m_DeviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
-    m_DeviceSetSelectorWidget->SetConnectButtonText("Launch Server");
-    m_DeviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-    m_DeviceSetSelectorWidget->setMaximumWidth(200);
-    verticalLayout_4->addWidget(m_DeviceSetSelectorWidget);
-    connect(m_DeviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
+    deviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
+    deviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
+    deviceSetSelectorWidget->SetConnectButtonText("Start");
+    deviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+    deviceSetSelectorWidget->setMaximumWidth(200);
+    verticalLayout_4->addWidget(deviceSetSelectorWidget);
+    connect(deviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
 }
 
 // Read config file and connect to devices
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
-    qDebug() << "Connect using configuration file: " << aConfigFile.c_str();
+    this->trackerButton->setDisabled(false);
 
-    m_configRootElement = vtkSmartPointer<vtkXMLDataElement>::Take(vtkXMLUtilities::ReadElementFromFile(aConfigFile.c_str()));
-
-    // Read configuration
-    if (PlusXmlUtils::ReadDeviceSetConfigurationFromFile(m_configRootElement, aConfigFile.c_str()) == PLUS_FAIL)
-    {
-        LOG_ERROR("Unable to read configuration from file" << aConfigFile.c_str());
-        exit;
-    }
-
-    vtkPlusConfig::GetInstance()->SetDeviceSetConfigurationData(m_configRootElement);
-
-    if (dataCollector->ReadConfiguration(m_configRootElement) != PLUS_SUCCESS)
-    {
-        LOG_ERROR("Configuration incorrect for vtkPlusDataCollector.");
-        exit;
-    }
-
-    // Set transform names
-    stylusToTrackerName.SetTransformName("StylusToTracker");
-    referenceToTrackerName.SetTransformName("ReferenceToTracker");
-    stylusTipToReferenceName.SetTransformName("StylusTipToReference");
-    stylusTipToTrackerName.SetTransformName("StylusTipToTracker");
-    accelerometerToTrackerName.SetTransformName("AccelToTracker");
-    accelerometer2ToTrackerName.SetTransformName("AccelToTracker2");
+    // Initialize visualizationcontroller
+    this->visualizationController
 }
 
 
@@ -517,172 +427,7 @@ void basic_QtVTK::loadFiducialPts()
 
 void basic_QtVTK::loadMesh()
 {
-    QString fname = QFileDialog::getOpenFileName(this,
-        tr("Open phantom mesh"),
-        QDir::currentPath(),
-        "PolyData File (*.vtk *.stl *.ply *.obj *.vtp *.mha)");
-
-    // std::cerr << fname.toStdString().c_str() << std::endl;
-
-    vtkPolyData *data;
-
-    vtkAlgorithm *reader = nullptr;
-    vtkImageData *input = nullptr;
-
-    QFileInfo info(fname);
-    bool knownFileType = true;
-
-    // parse the file extension and use the appropriate reader
-    if (info.suffix() == QString(tr("vtk")))
-    {
-        data = readAnPolyData<vtkPolyDataReader >(fname.toStdString().c_str());
-    }
-    else if (info.suffix() == QString(tr("stl")) || info.suffix() == QString(tr("stlb")))
-    {
-        data = readAnPolyData<vtkSTLReader>(fname.toStdString().c_str());
-    }
-    else if (info.suffix() == QString(tr("ply")))
-    {
-        data = readAnPolyData<vtkPLYReader>(fname.toStdString().c_str());
-    }
-    else if (info.suffix() == QString(tr("obj")))
-    {
-        data = readAnPolyData<vtkOBJReader>(fname.toStdString().c_str());
-    }
-    else if (info.suffix() == QString(tr("vtp")))
-    {
-        data = readAnPolyData<vtkXMLPolyDataReader>(fname.toStdString().c_str());
-    }
-    else if (info.suffix() == QString(tr("mha")))
-    {
-        vtkMetaImageReader *metaReader = vtkMetaImageReader::New();
-        metaReader->SetFileName(fname.toUtf8());
-        //metaReader->SetFileName("C://users//danie//Documents//CTChest.mha");
-        metaReader->Update();
-        input = metaReader->GetOutput();
-        reader = metaReader;
-
-        // Verify that we actually have a volume
-        int dim[3];
-        input->GetDimensions(dim);
-        if (dim[0] < 2 ||
-            dim[1] < 2 ||
-            dim[2] < 2)
-        {
-            cout << "Error loading data!" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    else
-    {
-        knownFileType = false;
-        LOG_ERROR("Unknown file Type")
-    }
-
-    if (knownFileType)
-    {
-        // For Fluoro Volume
-        vtkNew<vtkPolyDataMapper> mapper;
-        vtkNew<vtkSmartVolumeMapper> volumeMapper;
-        vtkNew<vtkVolumeProperty> property;
-        vtkNew<vtkColorTransferFunction> colorFun;
-        vtkNew<vtkPiecewiseFunction> opacityFun;
-
-        property->SetColor(colorFun);
-        property->SetScalarOpacity(opacityFun);
-        property->SetInterpolationTypeToLinear();
-
-        colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
-        colorFun->AddRGBPoint(-1592.78540039063, 0.250980392156863, 0.250980392156863, 0.250980392156863);
-        colorFun->AddRGBPoint(-124.556709289551, 0.501960784313725, 0.501960784313725, 0.501960784313725);
-        colorFun->AddRGBPoint(998.206420898438, 0.752941176470588, 0.752941176470588, 0.752941176470588);
-        colorFun->AddRGBPoint(2466.43505859375, 1, 1, 1);
-        colorFun->AddRGBPoint(3071, 1, 1, 1);
-
-        opacityFun->AddPoint(-3024, 0);
-        opacityFun->AddPoint(-3024, 0);
-        opacityFun->AddPoint(-1284.333984375, 0);
-        opacityFun->AddPoint(171.556655883789, 0);
-        opacityFun->AddPoint(702.093078613281, 0.0952381044626236);
-        opacityFun->AddPoint(3071, 0);
-        opacityFun->AddPoint(3071, 0);
-
-        property->ShadeOff();
-
-        // For Volume
-        vtkNew<vtkSmartVolumeMapper> volumeMapper2;
-        vtkNew<vtkVolumeProperty> property2;
-        vtkNew<vtkColorTransferFunction> colorFun2;
-        vtkNew<vtkPiecewiseFunction> opacityFun2;
-
-        property2->SetColor(colorFun2);
-        property2->SetScalarOpacity(opacityFun2);
-        property2->SetInterpolationTypeToLinear();
-
-        colorFun2->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
-        colorFun2->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
-        colorFun2->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
-
-        opacityFun2->AddPoint(-3024, 0, 0.5, 0.0);
-        opacityFun2->AddPoint(-16, 0, .49, .61);
-        opacityFun2->AddPoint(641, .72, .5, 0.0);
-        opacityFun2->AddPoint(3071, .71, 0.5, 0.0);
-
-        volumeMapper2->SetBlendModeToComposite();
-        property2->ShadeOn();
-        property2->SetAmbient(0.1);
-        property2->SetDiffuse(0.9);
-        property2->SetSpecular(0.2);
-        property2->SetSpecularPower(10.0);
-        property2->SetScalarOpacityUnitDistance(0.8919);
-
-        if (info.suffix() == QString(tr("mha")))
-        {
-            volumeMapper->SetInputConnection(reader->GetOutputPort());
-            volumeMapper2->SetInputConnection(reader->GetOutputPort());
-
-            volume->SetMapper(volumeMapper2);
-            fluoroVolume->SetMapper(volumeMapper);
-
-            volume->SetProperty(property2);
-            fluoroVolume->SetProperty(property);
-
-            //volume->SetOrientation(0, 0, 180);
-            fluoroVolume->SetOrientation(0, 0, 180);
-
-            //ren->AddVolume(volume);
-            ren2->AddVolume(fluoroVolume);
-        }
-        
-        else
-        {
-            mapper->SetInputData(data);
-            actor->SetMapper(mapper);
-            ren->AddActor(actor);
-        }
-
-        // reset the camera according to visible actors
-        ren->GetActiveCamera()->ParallelProjectionOff();
-
-        
-        ren->ResetCamera();
-        ren->ResetCameraClippingRange();
-        this->openGLWidget->GetRenderWindow()->Render();
-
-        vtkInteractorStyleTrackballCamera *inStyle = vtkInteractorStyleTrackballCamera::New();
-        this->openGLWidget2->GetInteractor()->SetInteractorStyle(inStyle);
-
-        ren2->ResetCamera();
-        ren2->ResetCameraClippingRange();
-        this->openGLWidget2->GetRenderWindow()->Render();
-
-
-    }
-    else
-    {
-        QErrorMessage *em = new QErrorMessage(this);
-        em->showMessage("Input file format not supported");
-    }
+    this->visualizationController->LoadMesh();
 }
 
 
@@ -794,6 +539,15 @@ void basic_QtVTK::createLinearZStylusActor()
     trackerChannel->GetTrackedFrame(trackerFrame);
     transformRepository->SetTransforms(trackerFrame);
 
+    try
+    {
+      throw new std::invalid_argument("asd");
+    }
+    catch (std::invalid_argument ex)
+    {
+      printf(ex.what());
+      exit;
+    }
 
     PlusTransformName name;
     name.SetTransformName("StylusTipToStylus");

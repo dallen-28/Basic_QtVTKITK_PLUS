@@ -341,6 +341,7 @@ void basic_QtVTK::CollectSinglePointPhantom()
 void basic_QtVTK::ResetPhantomCollectedPoints()
 {
     LOG_INFO("reset");
+    this->visualizationController->UpdateTransferFunction();
 }
 
 

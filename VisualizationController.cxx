@@ -21,6 +21,7 @@ VisualizationController::VisualizationController(basic_QtVTK* mainWindow)
     this->cameraTransform = vtkSmartPointer<vtkTransform>::New();
     this->camera2Transform = vtkSmartPointer<vtkTransform>::New();
 
+    // Set camera up direction to +x
     this->up[0] = 1.0;
     this->up[0] = 0.0;
     this->up[0] = 0.0;
@@ -91,6 +92,8 @@ void VisualizationController::SetCameraUsingWitMotionTracker()
     vtkNew<vtkTransform> tran;
     tran->Identity();
     tran->PostMultiply();
+
+    // Extract Y angle from second acceleromter
     double *a = this->RotationMatrixToEulerAngles(this->dataRepository->accelerometer2ToTracker);
     a[1] = a[1] * 180 / 3.14159;
 
@@ -107,6 +110,8 @@ void VisualizationController::SetCameraUsingWitMotionTracker()
     this->ren->GetActiveCamera()->SetFocalPoint(0, -100, a[1] - 175);
     cameraTransform->MultiplyPoint(up, out);
     this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
+
+    delete[] a;
 }
 
 void VisualizationController::SetCamera2UsingWitMotionTracker()
@@ -152,8 +157,7 @@ void VisualizationController::LoadMesh(std::string id)
     }
     else
     {
-        //QErrorMessage *em = new QErrorMessage(this->mainWindow);
-        //em->showMessage("Input file format not supported");
+        LOG_ERROR("Input file format not supported.");
         return;
     }
 

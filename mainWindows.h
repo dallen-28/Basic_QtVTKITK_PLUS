@@ -118,7 +118,6 @@ private:
     void CreateTrackerLogo();
     void CreateLinearZStylusActor();
     void SetupQTObjects();
-    void SetupVTKObjects();
     void UpdateTrackerInfo();
 
 

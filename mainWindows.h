@@ -63,6 +63,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <qcombobox.h>
 #include <QPlusDeviceSetSelectorWidget.h>
 #include <Qwidget.h>
+#include <QTimer.h>
 
 // Vtk includes
 #include <vtkGenericOpenGLRenderWindow.h>
@@ -80,6 +81,7 @@ public:
     // constructor/destructor
     basic_QtVTK();
     ~basic_QtVTK() {};
+    void Render();
 
     protected slots:
 
@@ -117,11 +119,11 @@ private:
     void CreateLinearZStylusActor();
     void SetupQTObjects();
     void SetupVTKObjects();
-    void Render();
+    void UpdateTrackerInfo();
 
 
     VisualizationController *visualizationController;
-
+    QTimer                  *trackerTimer;
 
 };
 

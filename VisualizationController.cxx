@@ -9,17 +9,116 @@ template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
     return(vtkPolyData::SafeDownCast(reader->GetOutput()));
 }
 
-VisualizationController::VisualizationController()
+VisualizationController::VisualizationController(basic_QtVTK* mainWindow)
 {
+    // We need to keep a reference to the mainWindow
+    this->mainWindow = mainWindow;
+
     this->surfaceMesh = vtkSmartPointer<vtkActor>::New();
     this->volume = vtkSmartPointer<vtkVolume>::New();
+    this->ren = vtkSmartPointer<vtkRenderer>::New();
+    this->ren2 = vtkSmartPointer<vtkRenderer>::New();
+    this->cameraTransform = vtkSmartPointer<vtkTransform>::New();
+    this->camera2Transform = vtkSmartPointer<vtkTransform>::New();
+
+    this->up[0] = 1.0;
+    this->up[0] = 0.0;
+    this->up[0] = 0.0;
+    this->up[0] = 0.0;
+
+    this->colorFun = vtkSmartPointer<vtkColorTransferFunction>::New();
+    this->opacityFun = vtkSmartPointer<vtkPiecewiseFunction>::New();
+    this->volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
+    this->volumeMapper = vtkSmartPointer<vtkSmartVolumeMapper>::New();
+
+    this->volumeProperty->SetColor(colorFun);
+    this->volumeProperty->SetScalarOpacity(opacityFun);
+    this->volumeProperty->SetInterpolationTypeToLinear();
+
 }
+void VisualizationController::LoadVolumes(std::string configFile)
+{
+    this->configFile = configFile;
+
+    this->dataRepository = new DataRepository(this->configFile);
+    this->LoadMesh("CTVolume");
+    this->LoadMesh("SurfaceMesh");
+}
+
+void VisualizationController::StartTracker()
+{
+    this->dataRepository->StartDataCollection();
+}
+
+void VisualizationController::UpdateTracker()
+{
+    this->dataRepository->GetTransforms();
+    this->SetCameraUsingWitMotionTracker();
+    //this->SetCamera2UsingWitMotionTracker();
+}
+
+double * VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
+{
+    double* a = new double[3];
+
+    float sy = sqrt(R->Element[0][0] * R->Element[0][0] + R->Element[1][0] * R->Element[1][0]);
+
+    bool singular = sy < 1e-6;
+
+    float x, y, z;
+    if (!singular)
+    {
+        x = atan2(R->Element[2][1], R->Element[2][2]);
+        y = atan2(-R->Element[2][0], sy);
+        z = atan2(R->Element[1][0], R->Element[0][0]);
+    }
+    else
+    {
+        x = atan2(-R->Element[1][2], R->Element[1][1]);
+        y = atan2(-R->Element[2][0], sy);
+        z = 0;
+    }
+
+    a[0] = x;
+    a[1] = y;
+    a[2] = z;
+
+    return a;
+}
+
+void VisualizationController::SetCameraUsingWitMotionTracker()
+{
+    vtkNew<vtkTransform> tran;
+    tran->Identity();
+    tran->PostMultiply();
+    double *a = this->RotationMatrixToEulerAngles(this->dataRepository->accelerometer2ToTracker);
+    a[1] = a[1] * 180 / 3.14159;
+
+    this->cameraTransform->PostMultiply();
+    this->cameraTransform->Identity();
+    this->cameraTransform->Translate(0, 0, -800);
+    this->cameraTransform->Concatenate(this->dataRepository->accelerometerToTracker);
+    this->cameraTransform->Concatenate(this->dataRepository->accelerometerToCT);
+    this->cameraTransform->Translate(0, 0, -174);
+    this->cameraTransform->Translate(0, 0, a[1] - 175);
+    this->cameraTransform->Update();
+
+    this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
+    this->ren->GetActiveCamera()->SetFocalPoint(0, -100, a[1] - 175);
+    cameraTransform->MultiplyPoint(up, out);
+    this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
+}
+
+void VisualizationController::SetCamera2UsingWitMotionTracker()
+{
+}
+
 void VisualizationController::LoadMesh(std::string id)
 {
-    this->dataRepository = new DataRepository()
+    
 
     // Get FileName from repository
-    std::string fileName = this->dataRepository->LoadVolume(id);
+    std::string fileName = this->dataRepository->GetVolumeFileNameFromId(id);
 
     vtkPolyData *data;
 
@@ -49,52 +148,54 @@ void VisualizationController::LoadMesh(std::string id)
     else if (info.suffix() == QString("mha"))
     {
         this->LoadVolume(fileName);
+        return;
     }
     else
     {
-        QErrorMessage *em = new QErrorMessage(this);
-        em->showMessage("Input file format not supported");
+        //QErrorMessage *em = new QErrorMessage(this->mainWindow);
+        //em->showMessage("Input file format not supported");
         return;
     }
 
     // For surface mesh rendering
     vtkNew<vtkPolyDataMapper> mapper;
 
-    // For volume rendering
-    vtkNew<vtkSmartVolumeMapper> volumeMapper;
-
     mapper->SetInputData(data);
-    surfaceMesh->SetMapper(mapper);
-    ren->AddActor(surfaceMesh);
+    this->surfaceMesh->SetMapper(mapper);
+    this->ren->AddActor(this->surfaceMesh);
 
-    ren->ResetCamera();
-    ren->ResetCameraClippingRange();
-    this->openGLWidget->GetRenderWindow()->Render();
+    this->ren->ResetCamera();
+    this->ren->ResetCameraClippingRange();
 
 }
 void VisualizationController::LoadVolume(std::string fileName)
 {
+    // For volume rendering
+    vtkNew<vtkSmartVolumeMapper> volumeMapper;
+
     vtkAlgorithm *reader = nullptr;
     vtkImageData *input = nullptr;
-    vtkMetaImageReader *metaReader = vtkMetaImageReader::New();
-    metaReader->SetFileName(fileName.c_str);
+    vtkSmartPointer<vtkMetaImageReader> metaReader = vtkSmartPointer<vtkMetaImageReader>::New();
+    metaReader->SetFileName(fileName.c_str());
     metaReader->Update();
     input = metaReader->GetOutput();
     reader = metaReader;
 
+    this->volumeMapper->SetInputConnection(reader->GetOutputPort());
+    this->UpdateTransferFunction();
+    this->volume->SetMapper(this->volumeMapper);
+    this->volume->SetProperty(this->volumeProperty);
 
+    this->ren2->AddVolume(this->volume);
+
+    this->ren2->ResetCamera();
+    this->ren2->ResetCameraClippingRange();
 }
 
 void VisualizationController::UpdateTransferFunction()
 {
-    vtkNew<vtkVolumeProperty> property;
-    vtkNew<vtkColorTransferFunction> colorFun;
-    vtkNew<vtkPiecewiseFunction> opacityFun;
-
-
-    property->SetColor(colorFun);
-    property->SetScalarOpacity(opacityFun);
-    property->SetInterpolationTypeToLinear();
+    colorFun->RemoveAllPoints();
+    opacityFun->RemoveAllPoints();
 
     colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
     colorFun->AddRGBPoint(-1592.78540039063, 0.250980392156863, 0.250980392156863, 0.250980392156863);
@@ -111,5 +212,5 @@ void VisualizationController::UpdateTransferFunction()
     opacityFun->AddPoint(3071, 0);
     opacityFun->AddPoint(3071, 0);
 
-    property->ShadeOff();
+    volumeProperty->ShadeOff();
 }

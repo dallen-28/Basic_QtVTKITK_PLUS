@@ -1,12 +1,22 @@
 #pragma once
+
+// StdLib includes
 #include <stdio.h>
 #include <stdlib.h>
+
+// Plus includes
 #include <vtkPlusWitMotionTracker.h>
 #include <vtkPlusVirtualMixer.h>
 #include <vtkPlusNDITracker.h>
 #include <vtkPlusDevice.h>
 #include <vtkPlusTransformRepository.h>
 #include <vtkPlusDataCollector.h>
+
+// VTK includes
+#include <vtkSmartPointer.h>
+#include <vtkMatrix4x4.h>
+#include <vtkXMLDataElement.h>
+
 
 
 class DataRepository
@@ -18,14 +28,16 @@ public:
     // are the transforms 
     vtkSmartPointer<vtkMatrix4x4>                       accelerometerToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       accelerometer2ToTracker;
+    vtkSmartPointer<vtkMatrix4x4>                       accelerometerToCT;
 
     DataRepository(std::string);
     ~DataRepository();
 
     // Return the full path name of the volume specified by ID
-    std::string LoadVolume(std::string);
+    std::string GetVolumeFileNameFromId(std::string);
     void StartDataCollection();
     void GetTransforms();
+    void ReadConfiguration(std::string);
 
 
 private:

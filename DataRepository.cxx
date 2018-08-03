@@ -6,7 +6,19 @@ DataRepository::DataRepository(std::string configFile)
     this->transformRepository = vtkSmartPointer<vtkPlusTransformRepository>::New();
     this->accelerometerToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
     this->accelerometer2ToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    this->configRootElement = vtkSmartPointer<vtkXMLDataElement>::New();
+    this->accelerometerToCT = vtkSmartPointer<vtkMatrix4x4>::New();
+    double m[16] = { 0,1,0,0,
+        0,0,1,0,
+        1,0,0,0,
+        0,0,0,1 };
+    this->accelerometerToCT->DeepCopy(m);
 
+    this->ReadConfiguration(configFile);
+}
+
+void DataRepository::ReadConfiguration(std::string configFile)
+{
     this->configFile = configFile;
     LOG_INFO("Connect using configuration file: ", this->configFile);
 
@@ -31,19 +43,20 @@ DataRepository::DataRepository(std::string configFile)
     accelerometerToTrackerName.SetTransformName("AccelToTracker");
     accelerometer2ToTrackerName.SetTransformName("AccelToTracker2");
 }
+  
 
 DataRepository::~DataRepository()
 {
 
 }
 
-std::string DataRepository::LoadVolume(std::string id)
+std::string DataRepository::GetVolumeFileNameFromId(std::string id)
 {
-    std::string filePath;
-    vtkXMLDataElement* volumeElement = this->configRootElement->FindNestedElementWithNameAndId("Volume", id.c_str);
+    vtkSmartPointer<vtkXMLDataElement> volumeElement = vtkSmartPointer<vtkXMLDataElement>::New();
  
-
-    return volumeElement->GetAttributeValue(id.c_str);
+    volumeElement = this->configRootElement->FindNestedElementWithNameAndAttribute("Volume", "Id", id.c_str());
+    std::string name = volumeElement->GetAttribute("Path");
+    return name; 
 }
 
 void DataRepository::StartDataCollection()

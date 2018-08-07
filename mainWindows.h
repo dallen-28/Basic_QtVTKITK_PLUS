@@ -99,6 +99,7 @@ public:
     void EditRendererBackgroundColor();
     void ScreenShot();
     void StartTracker(bool);
+    void UpdateTrackerInfo();
     void StylusCalibration(bool);
     void CollectSinglePointPhantom();
     void CollectDRR();
@@ -118,7 +119,6 @@ private:
     void CreateTrackerLogo();
     void CreateLinearZStylusActor();
     void SetupQTObjects();
-    void UpdateTrackerInfo();
 
 
     VisualizationController *visualizationController;

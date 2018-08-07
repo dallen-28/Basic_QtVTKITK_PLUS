@@ -167,12 +167,6 @@ basic_QtVTK::basic_QtVTK()
     this->visualizationController->ren2->SetBackground(.9, .9, .9);
     SetupQTObjects();
 
-    /*
-    vtkSmartPointer<vtkRenderer> ren = vtkSmartPointer<vtkRenderer>::New();
-    vtkSmartPointer<vtkGenericOpenGLRenderWindow> renWin = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
-    this->openGLWidget->SetRenderWindow(renWin);
-    this->openGLWidget->GetRenderWindow()->AddRenderer(ren);
-    ren->SetBackground(.1, .2, .4);*/
     this->Render();
 
 }
@@ -335,13 +329,16 @@ void basic_QtVTK::CollectDRR()
 void basic_QtVTK::CollectSinglePointPhantom()
 {
     LOG_INFO("Collect");
+    this->visualizationController->UpdateTransferFunction(VisualizationController::Preset::Fluoro);
+    this->Render();
 }
 
 
 void basic_QtVTK::ResetPhantomCollectedPoints()
 {
     LOG_INFO("reset");
-    this->visualizationController->UpdateTransferFunction();
+    this->visualizationController->UpdateTransferFunction(VisualizationController::Preset::Xray);
+    this->Render();
 }
 
 

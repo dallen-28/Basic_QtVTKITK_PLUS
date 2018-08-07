@@ -54,8 +54,7 @@ void VisualizationController::StartTracker()
 void VisualizationController::UpdateTracker()
 {
     this->dataRepository->GetTransforms();
-    this->SetCameraUsingWitMotionTracker();
-    //this->SetCamera2UsingWitMotionTracker();
+    this->SetCamerasUsingWitMotionTracker();
 }
 
 double * VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
@@ -87,7 +86,7 @@ double * VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
     return a;
 }
 
-void VisualizationController::SetCameraUsingWitMotionTracker()
+void VisualizationController::SetCamerasUsingWitMotionTracker()
 {
     vtkNew<vtkTransform> tran;
     tran->Identity();
@@ -99,6 +98,8 @@ void VisualizationController::SetCameraUsingWitMotionTracker()
 
     this->cameraTransform->PostMultiply();
     this->cameraTransform->Identity();
+
+    // 
     this->cameraTransform->Translate(0, 0, -800);
     this->cameraTransform->Concatenate(this->dataRepository->accelerometerToTracker);
     this->cameraTransform->Concatenate(this->dataRepository->accelerometerToCT);
@@ -111,11 +112,11 @@ void VisualizationController::SetCameraUsingWitMotionTracker()
     cameraTransform->MultiplyPoint(up, out);
     this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
-    delete[] a;
-}
+    this->ren2->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
+    this->ren2->GetActiveCamera()->SetFocalPoint(0, -100, a[1] - 175);
+    this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
-void VisualizationController::SetCamera2UsingWitMotionTracker()
-{
+    delete[] a;
 }
 
 void VisualizationController::LoadMesh(std::string id)
@@ -186,7 +187,7 @@ void VisualizationController::LoadVolume(std::string fileName)
     reader = metaReader;
 
     this->volumeMapper->SetInputConnection(reader->GetOutputPort());
-    this->UpdateTransferFunction();
+    this->UpdateTransferFunction(Preset::Fluoro);
     this->volume->SetMapper(this->volumeMapper);
     this->volume->SetProperty(this->volumeProperty);
 
@@ -196,11 +197,25 @@ void VisualizationController::LoadVolume(std::string fileName)
     this->ren2->ResetCameraClippingRange();
 }
 
-void VisualizationController::UpdateTransferFunction()
+void VisualizationController::UpdateTransferFunction(int preset)
 {
     colorFun->RemoveAllPoints();
     opacityFun->RemoveAllPoints();
 
+
+    if (preset == Preset::Fluoro)
+    {
+        this->SetToFluoro();
+    }
+    else if (preset == Preset::Xray)
+    {
+        this->SetToXray();
+    }
+
+
+}
+void VisualizationController::SetToFluoro()
+{
     colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
     colorFun->AddRGBPoint(-1592.78540039063, 0.250980392156863, 0.250980392156863, 0.250980392156863);
     colorFun->AddRGBPoint(-124.556709289551, 0.501960784313725, 0.501960784313725, 0.501960784313725);
@@ -216,5 +231,31 @@ void VisualizationController::UpdateTransferFunction()
     opacityFun->AddPoint(3071, 0);
     opacityFun->AddPoint(3071, 0);
 
+    volumeMapper->SetBlendModeToComposite();
     volumeProperty->ShadeOff();
+
+    this->ren2->SetBackground(.9, .9, .9);
+}
+void VisualizationController::SetToXray()
+{
+    colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
+    colorFun->AddRGBPoint(-1592.78540039063, 0.250980392156863, 0.250980392156863, 0.250980392156863);
+    colorFun->AddRGBPoint(-124.556709289551, 0.501960784313725, 0.501960784313725, 0.501960784313725);
+    colorFun->AddRGBPoint(998.206420898438, 0.752941176470588, 0.752941176470588, 0.752941176470588);
+    colorFun->AddRGBPoint(2466.43505859375, 1, 1, 1);
+    colorFun->AddRGBPoint(3071, 1, 1, 1);
+
+
+
+    opacityFun->AddPoint(-3024, 0);
+    opacityFun->AddPoint(-3024, 0);
+    opacityFun->AddPoint(-1284.333984375, 0);
+    opacityFun->AddPoint(171.556655883789, 0);
+    opacityFun->AddPoint(702.093078613281, 0.0952381044626236);
+    opacityFun->AddPoint(3071, 0);
+    opacityFun->AddPoint(3071, 0);
+
+    volumeMapper->SetBlendModeToComposite();
+    volumeProperty->ShadeOff();
+    this->ren2->SetBackground(0, 0, 0);
 }

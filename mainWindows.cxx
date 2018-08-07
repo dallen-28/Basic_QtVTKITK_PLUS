@@ -151,7 +151,8 @@ basic_QtVTK::basic_QtVTK()
     this->trackerWidget->hide();
 
     // Disable tracker button until Volume is loaded
-    //this->trackerButton->setDisabled(true);
+    this->trackerButton->setDisabled(true);
+    this->zoomSlider->setDisabled(true);
 
     // Initialize VTK Objects 
     this->visualizationController = new VisualizationController(this);
@@ -192,8 +193,13 @@ void basic_QtVTK::SetupQTObjects()
     connect(deleteOnePhantomPtButton, SIGNAL(clicked()), this, SLOT(DeleteOnePhantomCollectedPoints()));
     connect(phantomRegistrationButton, SIGNAL(clicked()), this, SLOT(PerformPhantomRegistration()));
     connect(collectSinglePtButton, SIGNAL(clicked()), this, SLOT(CollectSinglePointPhantom()));
-    connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(CollectDRR()));
+    connect(fluoroButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToFluoro(bool)));
+    connect(bonesButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToBones(bool)));
+    connect(xRayButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToXray(bool)));
+    connect(zoomSlider, SIGNAL(valueChanged(int)), this, SLOT(Zoom(int)));
+    //connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(CollectDRR()));
 
+    // For viewing of log messages
     QPlusStatusIcon* statusIcon = new QPlusStatusIcon(NULL);
     statusIcon->SetMaxMessageCount(3000);
     statusbar->insertWidget(0, statusIcon);
@@ -219,13 +225,13 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 
 
 // This method starts the Tracker Device
-// 
 void basic_QtVTK::StartTracker(bool checked)
 {
 
     LOG_INFO("START TRACKER");
-    
+
     this->visualizationController->StartTracker();
+    this->zoomSlider->setDisabled(false);
 
     // create a QTimer
     trackerTimer = new QTimer(this);
@@ -238,6 +244,25 @@ void basic_QtVTK::UpdateTrackerInfo()
 {
     this->visualizationController->UpdateTracker();
     this->Render();
+}
+void basic_QtVTK::ChangeToBones(bool checked)
+{
+    this->visualizationController->UpdateTransferFunction(VisualizationController::Bone);
+}
+
+void basic_QtVTK::ChangeToXray(bool checked)
+{
+    this->visualizationController->UpdateTransferFunction(VisualizationController::Xray);
+}
+
+void basic_QtVTK::ChangeToFluoro(bool checked)
+{
+    this->visualizationController->UpdateTransferFunction(VisualizationController::Fluoro);
+}
+
+void basic_QtVTK::Zoom(int value)
+{
+    this->visualizationController->Zoom(value);
 }
 
 void basic_QtVTK::LoadFiducialPts()
@@ -285,7 +310,10 @@ void basic_QtVTK::ScreenShot()
 
 void basic_QtVTK::EditRendererBackgroundColor()
 {
-    
+    QColorDialog *dialog = new QColorDialog();
+    QColor color = dialog->getColor();
+    this->visualizationController->ren2->SetBackground(color.red(), color.blue(), color.green());
+    this->Render();
 }
 
 
@@ -329,7 +357,6 @@ void basic_QtVTK::CollectDRR()
 void basic_QtVTK::CollectSinglePointPhantom()
 {
     LOG_INFO("Collect");
-    this->visualizationController->UpdateTransferFunction(VisualizationController::Preset::Fluoro);
     this->Render();
 }
 
@@ -337,7 +364,6 @@ void basic_QtVTK::CollectSinglePointPhantom()
 void basic_QtVTK::ResetPhantomCollectedPoints()
 {
     LOG_INFO("reset");
-    this->visualizationController->UpdateTransferFunction(VisualizationController::Preset::Xray);
     this->Render();
 }
 

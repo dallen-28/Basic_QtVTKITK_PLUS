@@ -40,7 +40,7 @@ class basic_QtVTK;
 class VisualizationController
 {
 public:
-    enum Preset
+    enum
     {
         Fluoro = 1,
         Xray,
@@ -54,8 +54,7 @@ public:
     void StartTracker();
     void UpdateTracker();
     void UpdateTransferFunction(int);
-    void SetToFluoro();
-    void SetToXray();
+    void Zoom(int);
 
     // Main Window needs public access to these
     vtkSmartPointer<vtkRenderer>                    ren;
@@ -63,13 +62,18 @@ public:
 
 
 private:
-
     double *RotationMatrixToEulerAngles(vtkMatrix4x4* R);
     void SetCamerasUsingWitMotionTracker();
     void LoadMesh(std::string);
     void LoadVolume(std::string);
+    void SetToFluoro();
+    void SetToXray();
+    void SetToBone();
+    
+    // Camera vectors
     double up[4];
     double out[4];
+    double zoomFactor;
 
     // Plus config File
     std::string configFile;

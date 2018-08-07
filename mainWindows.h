@@ -107,6 +107,10 @@ public:
     void DeleteOnePhantomCollectedPoints();
     void PerformPhantomRegistration();
     void AboutThisProgram();
+    void ChangeToBones(bool);
+    void ChangeToFluoro(bool);
+    void ChangeToXray(bool);
+    void Zoom(int);
 
 protected:
     /* Device Set Selector Widget */

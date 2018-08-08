@@ -18,14 +18,23 @@ VisualizationController::VisualizationController(basic_QtVTK* mainWindow)
     this->volume = vtkSmartPointer<vtkVolume>::New();
     this->ren = vtkSmartPointer<vtkRenderer>::New();
     this->ren2 = vtkSmartPointer<vtkRenderer>::New();
+    this->foregroundRenderer = vtkSmartPointer<vtkRenderer>::New();
     this->cameraTransform = vtkSmartPointer<vtkTransform>::New();
     this->camera2Transform = vtkSmartPointer<vtkTransform>::New();
-
+    
     // Set camera up direction to +x
     this->up[0] = 1.0;
     this->up[1] = 0.0;
     this->up[2] = 0.0;
     this->up[3] = 0.0;
+
+    // Render field of view image in the foreground
+    vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
+    reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfViewSmall.png");
+    imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
+    imageViewer->SetInputConnection(reader1->GetOutputPort());
+    imageViewer->SetRenderer(this->foregroundRenderer);
+
 
     this->colorFun = vtkSmartPointer<vtkColorTransferFunction>::New();
     this->opacityFun = vtkSmartPointer<vtkPiecewiseFunction>::New();
@@ -137,6 +146,7 @@ void VisualizationController::LoadMesh(std::string id)
     // Get FileName from repository
     std::string fileName = this->dataRepository->GetVolumeFileNameFromId(id);
 
+
     vtkPolyData *data;
 
     QFileInfo info(QString::fromStdString(fileName));
@@ -209,10 +219,54 @@ void VisualizationController::LoadVolume(std::string fileName)
 
     this->ren2->ResetCamera();
     this->ren2->ResetCameraClippingRange();
+
+    //this->foregroundRenderer->ResetCamera();
+    //this->foregroundRenderer->ResetCameraClippingRange();
+
+    ren2->SetLayer(0);
+    //ren2->InteractiveOff();
+    foregroundRenderer->SetLayer(1);
+
+    //int *imageSize = imageViewer->GetSize();
+
+    foregroundRenderer->GetActiveCamera()->SetFocalPoint(2600, 2600, 0);
+    foregroundRenderer->GetActiveCamera()->SetPosition(2600, 2600, 7500);
+    foregroundRenderer->ResetCameraClippingRange();
+    foregroundRenderer->InteractiveOff();
+
+    /*vtkSmartPointer<vtkConeSource> cone = vtkSmartPointer<vtkConeSource>::New();
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    mapper->SetInputConnection(cone->GetOutputPort());
+    actor->SetMapper(mapper);
+    this->foregroundRenderer->AddActor(actor);
+    foregroundRenderer->AddActor(actor);*/
+
 }
 void VisualizationController::Zoom(int value)
 {
     this->zoomFactor = value;
+}
+void VisualizationController::ZoomFOV(int value, int lastZoomValue)
+{
+    int difference = value - lastZoomValue;
+
+    // Positive zoom
+    /*if (difference >= 0)
+    {
+        this->foregroundRenderer->GetActiveCamera()->Zoom(-1/difference);
+    }
+    else
+    {
+        this->foregroundRenderer->GetActiveCamera()->Zoom(1/(-difference));
+    }*/
+    this->foregroundRenderer->GetActiveCamera()->SetPosition(2600, 2600, 7500 - value*100);
+    double *a = this->foregroundRenderer->GetActiveCamera()->GetPosition();
+    int *b = this->imageViewer->GetPosition();
+
+    this->foregroundRenderer->ResetCameraClippingRange();
+    LOG_INFO("Camera position: " << a[0] << " " << a[1] << " " << a[2]);
+    LOG_INFO("Field Of View Position: " <<b[0] << " " << b[1] << " " << b[2]);
 }
 
 void VisualizationController::UpdateTransferFunction(int preset)

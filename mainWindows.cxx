@@ -158,8 +158,10 @@ basic_QtVTK::basic_QtVTK()
     this->visualizationController = new VisualizationController(this);
 
     // Connect VTK with Qt
+    this->openGLWidget2->GetRenderWindow()->SetNumberOfLayers(2);
     this->openGLWidget->GetRenderWindow()->AddRenderer(this->visualizationController->ren);
     this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->ren2);
+    this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->foregroundRenderer);
 
     // Set to Blue
     this->visualizationController->ren->SetBackground(.1, .2, .4);
@@ -169,6 +171,8 @@ basic_QtVTK::basic_QtVTK()
     SetupQTObjects();
 
     this->Render();
+
+    this->lastZoomValue = 0;
 
 }
 void basic_QtVTK::Render()
@@ -197,6 +201,7 @@ void basic_QtVTK::SetupQTObjects()
     connect(bonesButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToBones(bool)));
     connect(xRayButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToXray(bool)));
     connect(zoomSlider, SIGNAL(valueChanged(int)), this, SLOT(Zoom(int)));
+    connect(fieldOfViewSlider, SIGNAL(valueChanged(int)), this, SLOT(ZoomFOV(int)));
     //connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(CollectDRR()));
 
     // For viewing of log messages
@@ -248,21 +253,30 @@ void basic_QtVTK::UpdateTrackerInfo()
 void basic_QtVTK::ChangeToBones(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Bone);
+    this->Render();
 }
 
 void basic_QtVTK::ChangeToXray(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Xray);
+    this->Render();
 }
 
 void basic_QtVTK::ChangeToFluoro(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Fluoro);
+    this->Render();
 }
 
 void basic_QtVTK::Zoom(int value)
 {
     this->visualizationController->Zoom(value);
+}
+void basic_QtVTK::ZoomFOV(int value)
+{
+    this->visualizationController->ZoomFOV(value, lastZoomValue);
+    this->Render();
+    this->lastZoomValue = value;
 }
 
 void basic_QtVTK::LoadFiducialPts()
@@ -312,7 +326,7 @@ void basic_QtVTK::EditRendererBackgroundColor()
 {
     QColorDialog *dialog = new QColorDialog();
     QColor color = dialog->getColor();
-    this->visualizationController->ren2->SetBackground(color.red(), color.blue(), color.green());
+    this->visualizationController->ren2->SetBackground(color.red(), color.green(), color.blue());
     this->Render();
 }
 

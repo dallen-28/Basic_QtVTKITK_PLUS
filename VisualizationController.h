@@ -12,6 +12,8 @@
 #include <vtkSTLReader.h>
 #include <vtkPLYReader.h>
 #include <vtkOBJReader.h>
+#include <vtkPNGReader.h>
+#include <vtkImageViewer2.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkMetaImageReader.h>
 #include <vtkRenderer.h>
@@ -26,6 +28,9 @@
 #include <vtkTransform.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkCamera.h>
+#include <vtkConeSource.h>
+#include <vtkImageResize.h>
+#include <vtkImageActor.h>
 
 // QT includes
 #include <qfileinfo.h>
@@ -55,10 +60,12 @@ public:
     void UpdateTracker();
     void UpdateTransferFunction(int);
     void Zoom(int);
+    void ZoomFOV(int, int);
 
     // Main Window needs public access to these
     vtkSmartPointer<vtkRenderer>                    ren;
     vtkSmartPointer<vtkRenderer>                    ren2;
+    vtkSmartPointer<vtkRenderer>                    foregroundRenderer;
 
 
 private:
@@ -74,6 +81,7 @@ private:
     double up[4];
     double out[4];
     double zoomFactor;
+    double fieldOfViewZoomFactor;
 
     // Plus config File
     std::string configFile;
@@ -92,6 +100,11 @@ private:
     vtkSmartPointer<vtkPiecewiseFunction>       opacityFun;
     vtkSmartPointer<vtkVolumeProperty>          volumeProperty;
     vtkSmartPointer<vtkSmartVolumeMapper>       volumeMapper;
+    vtkSmartPointer<vtkImageViewer2>            imageViewer;
+    vtkSmartPointer<vtkImageData>               data;
+    vtkSmartPointer<vtkImageResize>             resize;
+    vtkSmartPointer<vtkImageActor>              imageActor;
+
     
 
     // Data Repository

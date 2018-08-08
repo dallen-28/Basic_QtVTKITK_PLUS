@@ -111,6 +111,7 @@ public:
     void ChangeToFluoro(bool);
     void ChangeToXray(bool);
     void Zoom(int);
+    void ZoomFOV(int);
 
 protected:
     /* Device Set Selector Widget */
@@ -127,6 +128,7 @@ private:
 
     VisualizationController *visualizationController;
     QTimer                  *trackerTimer;
+    int                     lastZoomValue;
 
 };
 

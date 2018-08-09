@@ -31,6 +31,13 @@
 #include <vtkConeSource.h>
 #include <vtkImageResize.h>
 #include <vtkImageActor.h>
+#include <vtkProperty.h>
+#include <vtkAxesActor.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkCylinderSource.h>
+
+//stdlib includes
+#include <math.h>
 
 // QT includes
 #include <qfileinfo.h>
@@ -38,6 +45,9 @@
 #include <qobject.h>
 #include <qerrormessage.h>
 #include <qtimer.h>
+
+// PI
+const double M_PI = atan(1)*4.0;
 
 // basic_QtVTK Forward Declaration
 class basic_QtVTK;
@@ -55,12 +65,14 @@ public:
     VisualizationController(basic_QtVTK*);
     ~VisualizationController();
 
+    // 
     void LoadVolumes(std::string);
     void StartTracker();
     void UpdateTracker();
     void UpdateTransferFunction(int);
     void Zoom(int);
-    void ZoomFOV(int, int);
+    void ZoomFOV(int);
+    void EditMeshColour(int, int, int);
 
     // Main Window needs public access to these
     vtkSmartPointer<vtkRenderer>                    ren;
@@ -76,6 +88,7 @@ private:
     void SetToFluoro();
     void SetToXray();
     void SetToBone();
+    void DisplayCoordinateAxes();
     
     // Camera vectors
     double up[4];
@@ -95,17 +108,16 @@ private:
     vtkSmartPointer<vtkTransform>               cameraTransform;
     vtkSmartPointer<vtkTransform>               camera2Transform;   
 
+    // Field of View
+    vtkSmartPointer<vtkImageViewer2>            imageViewer;
+    int                                         fieldOfViewCenter;
+
     // Transfer Function
     vtkSmartPointer<vtkColorTransferFunction>   colorFun;
     vtkSmartPointer<vtkPiecewiseFunction>       opacityFun;
     vtkSmartPointer<vtkVolumeProperty>          volumeProperty;
     vtkSmartPointer<vtkSmartVolumeMapper>       volumeMapper;
-    vtkSmartPointer<vtkImageViewer2>            imageViewer;
-    vtkSmartPointer<vtkImageData>               data;
-    vtkSmartPointer<vtkImageResize>             resize;
-    vtkSmartPointer<vtkImageActor>              imageActor;
 
-    
 
     // Data Repository
     DataRepository                      *dataRepository;

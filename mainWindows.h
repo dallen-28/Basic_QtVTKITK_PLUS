@@ -128,7 +128,6 @@ private:
 
     VisualizationController *visualizationController;
     QTimer                  *trackerTimer;
-    int                     lastZoomValue;
 
 };
 

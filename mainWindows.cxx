@@ -142,9 +142,8 @@ POSSIBILITY OF SUCH DAMAGES.
 // cmath
 #include <cmath>
 
-// PI
-const float M_PI = 4 * atan(1);
-
+// Initialize Widgets to their initial states. Create the visualization controller 
+// and connect the renderers to the QT openGLWidgets and create the QT Slots. 
 basic_QtVTK::basic_QtVTK()
 {
     this->setupUi(this);
@@ -153,6 +152,7 @@ basic_QtVTK::basic_QtVTK()
     // Disable tracker button until Volume is loaded
     this->trackerButton->setDisabled(true);
     this->zoomSlider->setDisabled(true);
+    this->fieldOfViewSlider->setDisabled(true);
 
     // Initialize VTK Objects 
     this->visualizationController = new VisualizationController(this);
@@ -172,16 +172,16 @@ basic_QtVTK::basic_QtVTK()
 
     this->Render();
 
-    this->lastZoomValue = 0;
-
 }
+
+// Render both sides
 void basic_QtVTK::Render()
 {
     this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
 }
 
-
+// Setup QT objects 
 void basic_QtVTK::SetupQTObjects()
 {
     connect(action_Background_Color, SIGNAL(triggered()), this, SLOT(EditRendererBackgroundColor()));
@@ -204,18 +204,17 @@ void basic_QtVTK::SetupQTObjects()
     connect(fieldOfViewSlider, SIGNAL(valueChanged(int)), this, SLOT(ZoomFOV(int)));
     //connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(CollectDRR()));
 
-    // For viewing of log messages
-    QPlusStatusIcon* statusIcon = new QPlusStatusIcon(NULL);
-    statusIcon->SetMaxMessageCount(3000);
-    statusbar->insertWidget(0, statusIcon);
 
     // QPlusDeviceSetSelectorWidget
     deviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
     deviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
-    deviceSetSelectorWidget->SetConnectButtonText("Start");
+    deviceSetSelectorWidget->SetConnectButtonText("Load Phantom");
     deviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
     deviceSetSelectorWidget->setMaximumWidth(200);
     verticalLayout_4->addWidget(deviceSetSelectorWidget);
+
+    // Add start Tracker button just below this widget
+    verticalLayout_4->addWidget(trackerButton);
     connect(deviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
     //connect(deviceSetSelectorWidget, SIGNAL(DeviceSetSelected(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
 }
@@ -225,60 +224,76 @@ void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
     this->trackerButton->setDisabled(false);
     this->configFile = aConfigFile;
-    this->LoadMesh();
+    this->visualizationController->LoadVolumes(this->configFile);
+    this->Render();
+    this->fieldOfViewSlider->setDisabled(false);
 }
 
 
-// This method starts the Tracker Device
+// Start the live tracking
 void basic_QtVTK::StartTracker(bool checked)
 {
+    if (checked)
+    {
+        LOG_INFO("START TRACKER");
 
-    LOG_INFO("START TRACKER");
+        this->visualizationController->StartTracker();
+        this->zoomSlider->setDisabled(false);
 
-    this->visualizationController->StartTracker();
-    this->zoomSlider->setDisabled(false);
-
-    // create a QTimer
-    trackerTimer = new QTimer(this);
-    connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateTrackerInfo()));
-    trackerTimer->start(0);
-
-
+        // create a QTimer
+        trackerTimer = new QTimer(this);
+        connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateTrackerInfo()));
+        trackerTimer->start(0);       
+    }
+    else
+    {
+        trackerTimer->stop();
+        this->zoomSlider->setDisabled(true);
+    }
 }
+
+// Updates the scene based on tracking data
 void basic_QtVTK::UpdateTrackerInfo()
 {
     this->visualizationController->UpdateTracker();
     this->Render();
 }
+
+// Change the volume transfer function to view bones only
 void basic_QtVTK::ChangeToBones(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Bone);
     this->Render();
 }
 
+// Change to Xray transfer function 
 void basic_QtVTK::ChangeToXray(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Xray);
     this->Render();
 }
 
+// Change to Fluoro transfer function
 void basic_QtVTK::ChangeToFluoro(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Fluoro);
     this->Render();
 }
 
+// Zoom in/out on the volume
 void basic_QtVTK::Zoom(int value)
 {
     this->visualizationController->Zoom(value);
 }
+
+// Increase/decrease the FOV window
 void basic_QtVTK::ZoomFOV(int value)
 {
-    this->visualizationController->ZoomFOV(value, lastZoomValue);
+    this->visualizationController->ZoomFOV(value);
     this->Render();
-    this->lastZoomValue = value;
 }
 
+// Load Fiducial points from a file
 void basic_QtVTK::LoadFiducialPts()
 {
     // fiducial is stored as lines of 3 floats
@@ -300,7 +315,7 @@ void basic_QtVTK::LoadFiducialPts()
 
 void basic_QtVTK::LoadMesh()
 {
-    this->visualizationController->LoadVolumes(this->configFile);
+    // Load a file from disk and overwrite existing volume in configFile
     this->Render();
 }
 
@@ -321,28 +336,29 @@ void basic_QtVTK::ScreenShot()
   
 }
 
-
+// Edit the background colour of the surface mesh renderer
 void basic_QtVTK::EditRendererBackgroundColor()
 {
-    QColorDialog *dialog = new QColorDialog();
-    QColor color = dialog->getColor();
-    this->visualizationController->ren2->SetBackground(color.red(), color.green(), color.blue());
+    QColor colour = QColorDialog::getColor();
+    this->visualizationController->ren->SetBackground(colour.red(), colour.green(), colour.blue());
     this->Render();
 }
 
-
+// Edit the colour of the surface mesh
 void basic_QtVTK::EditMeshColor()
 {
-    // use this slot for selecting Transfer function preset
+    QColor colour = QColorDialog::getColor();
+    this->visualizationController->EditMeshColour(colour.red(), colour.green(), colour.blue());
+    this->Render();
 }
 
-
+// Exit the app
 void basic_QtVTK::SlotExit()
 {
     qApp->exit();
 }
 
-
+// Display information about the app
 void basic_QtVTK::AboutThisProgram()
 {
     QMessageBox::about(this, tr("About basic_QtVTK"),
@@ -365,30 +381,26 @@ void basic_QtVTK::CollectDRR()
 
 }
 
-/*!
-* A QT Slot to collect a single ponts on the phantom
-*/
+// Collect a single point on the phantom 
 void basic_QtVTK::CollectSinglePointPhantom()
 {
     LOG_INFO("Collect");
-    this->Render();
 }
 
-
+// Reset the collected points
 void basic_QtVTK::ResetPhantomCollectedPoints()
 {
     LOG_INFO("reset");
-    this->Render();
 }
 
-
+// Delete the last collected point
 void basic_QtVTK::DeleteOnePhantomCollectedPoints()
 {
 
     LOG_INFO("delete");
 }
 
-
+// Register the Fiducial points to the collected points 
 void basic_QtVTK::PerformPhantomRegistration()
 {
     LOG_INFO("register");

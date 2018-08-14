@@ -10,11 +10,8 @@ template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
 }
 
 // Initialize the VTK scene objects
-VisualizationController::VisualizationController(basic_QtVTK* mainWindow)
+VisualizationController::VisualizationController()
 {
-    // We need to keep a reference to the mainWindow
-    this->mainWindow = mainWindow;
-
     this->surfaceMesh = vtkSmartPointer<vtkActor>::New();
     this->volume = vtkSmartPointer<vtkVolume>::New();
     this->ren = vtkSmartPointer<vtkRenderer>::New();
@@ -29,10 +26,9 @@ VisualizationController::VisualizationController(basic_QtVTK* mainWindow)
     this->up[2] = 0.0;
     this->up[3] = 0.0;
 
-    // Render field of view image in the foreground (Get data from config file)
     vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
-    reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
+    reader1->SetFileName("Images\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
     fieldOfViewCenter = 2500;
@@ -54,7 +50,7 @@ void VisualizationController::LoadVolumes(std::string configFile)
     this->dataRepository = new DataRepository(this->configFile);
     this->LoadMesh("CTVolume");
     this->LoadMesh("SurfaceMesh");
-    this->DisplayCoordinateAxes();
+    //this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
@@ -71,7 +67,7 @@ void VisualizationController::UpdateTracker()
     this->SetCamerasUsingWitMotionTracker();
 }
 
-double * VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
+double* VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
 {
     double* a = new double[3];
 
@@ -162,8 +158,6 @@ void VisualizationController::LoadMesh(std::string id)
 
     // Get FileName from repository
     std::string fileName = this->dataRepository->GetVolumeFileNameFromId(id);
-
-
     vtkPolyData *data;
 
     QFileInfo info(QString::fromStdString(fileName));

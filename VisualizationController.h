@@ -62,7 +62,7 @@ public:
         Bone
     };
 
-    VisualizationController(basic_QtVTK*);
+    VisualizationController();
     ~VisualizationController();
 
     // 
@@ -121,5 +121,4 @@ private:
 
     // Data Repository
     DataRepository                      *dataRepository;
-    basic_QtVTK                         *mainWindow;
 };

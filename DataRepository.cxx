@@ -17,6 +17,7 @@ DataRepository::DataRepository(std::string configFile)
     this->ReadConfiguration(configFile);
 }
 
+
 void DataRepository::ReadConfiguration(std::string configFile)
 {
     this->configFile = configFile;

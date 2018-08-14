@@ -155,7 +155,7 @@ basic_QtVTK::basic_QtVTK()
     this->fieldOfViewSlider->setDisabled(true);
 
     // Initialize VTK Objects 
-    this->visualizationController = new VisualizationController(this);
+    this->visualizationController = new VisualizationController();
 
     // Connect VTK with Qt
     this->openGLWidget2->GetRenderWindow()->SetNumberOfLayers(2);

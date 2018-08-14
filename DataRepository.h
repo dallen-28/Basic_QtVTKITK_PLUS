@@ -35,6 +35,8 @@ public:
 
     // Return the full path name of the volume specified by ID
     std::string GetVolumeFileNameFromId(std::string);
+
+    // Return the full path name of the volume
     void StartDataCollection();
     void GetTransforms();
     void ReadConfiguration(std::string);

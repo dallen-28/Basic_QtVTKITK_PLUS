@@ -35,6 +35,11 @@
 #include <vtkAxesActor.h>
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkCylinderSource.h>
+#include <vtkGPUVolumeRayCastMapper.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkPointData.h>
+#include <vtkIntArray.h>
+#include <vtkDataArray.h>
 
 //stdlib includes
 #include <math.h>

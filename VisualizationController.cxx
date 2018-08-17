@@ -28,7 +28,8 @@ VisualizationController::VisualizationController()
 
     vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
-    reader1->SetFileName("Images\\FieldOfView.png");
+    //reader1->SetFileName("Images\\FieldOfView.png");
+    reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
     fieldOfViewCenter = 2500;
@@ -49,14 +50,14 @@ void VisualizationController::LoadVolumes(std::string configFile)
 
     this->dataRepository = new DataRepository(this->configFile);
     this->LoadMesh("CTVolume");
-    this->LoadMesh("SurfaceMesh");
+    //this->LoadMesh("SurfaceMesh");
     //this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
 {
     this->ren->InteractiveOff();
-    this->ren2->InteractiveOff();
+    //this->ren2->InteractiveOff();
     this->foregroundRenderer->InteractiveOff();
     this->dataRepository->StartDataCollection();
 }
@@ -209,7 +210,14 @@ void VisualizationController::LoadMesh(std::string id)
 }
 void VisualizationController::LoadVolume(std::string fileName)
 {
-    vtkNew<vtkSmartVolumeMapper> volumeMapper;
+    //vtkNew<vtkSmartVolumeMapper> volumeMapper;
+    vtkNew<vtkGPUVolumeRayCastMapper> volumeMapper;
+
+    volumeMapper->SetMaskTypeToLabelMap();
+    volumeMapper->GetMaskInput();
+
+    
+
 
     vtkAlgorithm *reader = nullptr;
     vtkImageData *input = nullptr;
@@ -219,8 +227,33 @@ void VisualizationController::LoadVolume(std::string fileName)
     input = metaReader->GetOutput();
     reader = metaReader;
 
+    //vtkNew<vtkPointData> pointData;
+    //vtkSmartPointer<vtkPointData> pointData = vtkSmartPointer<vtkPointData>::New();
+  
+    //pointData->setpoi
+
+    //pointData = input->GetPointData();
+    vtkNew<vtkPoints> points;
+
+    // Store the id's for all the coronary artery
+    vtkNew<vtkIntArray> ids;
+
+    // Iterate through all points in the imageData
+    for (int i = 0; i < input->GetNumberOfPoints(); i++)
+    {
+        printf("%d %f\n", i,input->GetPointData()->GetScalars()->GetTuple(i));
+        if (input->GetPointData()->GetScalars()->GetVariantValue(i) == 2)
+        {
+            ids->InsertNextTuple1(i);
+            
+        }
+        
+    }
+       
+
     this->volumeMapper->SetInputConnection(reader->GetOutputPort());
-    this->UpdateTransferFunction(VisualizationController::Fluoro);
+
+    //this->UpdateTransferFunction(VisualizationController::Fluoro);
     this->volume->SetMapper(this->volumeMapper);
     this->volume->SetProperty(this->volumeProperty);
 
@@ -252,8 +285,14 @@ void VisualizationController::Zoom(int value)
 void VisualizationController::ZoomFOV(int value)
 {
     // Move the camera closer to the Field of View in order to increase the apparent size
-    this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value*100);
-    this->foregroundRenderer->ResetCameraClippingRange();
+
+    if (value % 10 == 0)
+    {
+        this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
+        this->foregroundRenderer->ResetCameraClippingRange();
+    }
+
+    
 }
 
 void VisualizationController::UpdateTransferFunction(int preset)

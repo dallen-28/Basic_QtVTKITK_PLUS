@@ -40,6 +40,10 @@
 #include <vtkPointData.h>
 #include <vtkIntArray.h>
 #include <vtkDataArray.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkVariant.h>
+#include <vtkMetaImageWriter.h>
+#include <vtkDelimitedTextWriter.h>
 
 //stdlib includes
 #include <math.h>
@@ -90,6 +94,7 @@ private:
     void SetCamerasUsingWitMotionTracker();
     void LoadMesh(std::string);
     void LoadVolume(std::string);
+    void GetSegmentationPoints(std::string, double);
     void SetToFluoro();
     void SetToXray();
     void SetToBone();
@@ -110,6 +115,7 @@ private:
     // VTK Scene
     vtkSmartPointer<vtkActor>                   surfaceMesh;
     vtkSmartPointer<vtkVolume>                  volume;
+    vtkSmartPointer<vtkIntArray>                ids;
     vtkSmartPointer<vtkTransform>               cameraTransform;
     vtkSmartPointer<vtkTransform>               camera2Transform;   
 

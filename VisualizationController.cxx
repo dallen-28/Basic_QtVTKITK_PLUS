@@ -38,6 +38,7 @@ VisualizationController::VisualizationController()
     this->opacityFun = vtkSmartPointer<vtkPiecewiseFunction>::New();
     this->volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
     this->volumeMapper = vtkSmartPointer<vtkSmartVolumeMapper>::New();
+    this->ids = vtkSmartPointer<vtkIntArray>::New();
 
     this->volumeProperty->SetColor(colorFun);
     this->volumeProperty->SetScalarOpacity(opacityFun);
@@ -49,7 +50,12 @@ void VisualizationController::LoadVolumes(std::string configFile)
     this->configFile = configFile;
 
     this->dataRepository = new DataRepository(this->configFile);
+    //this->LoadMesh("CTVolume");
+
+    // Get point id's from labelmap corresponding to label value
+    this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
+
     //this->LoadMesh("SurfaceMesh");
     //this->DisplayCoordinateAxes();
 }
@@ -210,48 +216,45 @@ void VisualizationController::LoadMesh(std::string id)
 }
 void VisualizationController::LoadVolume(std::string fileName)
 {
-    //vtkNew<vtkSmartVolumeMapper> volumeMapper;
-    vtkNew<vtkGPUVolumeRayCastMapper> volumeMapper;
-
-    volumeMapper->SetMaskTypeToLabelMap();
-    volumeMapper->GetMaskInput();
-
-    
-
-
     vtkAlgorithm *reader = nullptr;
     vtkImageData *input = nullptr;
+    vtkPointData *pDat = nullptr;
+    vtkDataArray *dArr = nullptr;
     vtkSmartPointer<vtkMetaImageReader> metaReader = vtkSmartPointer<vtkMetaImageReader>::New();
     metaReader->SetFileName(fileName.c_str());
     metaReader->Update();
     input = metaReader->GetOutput();
     reader = metaReader;
+      
+    pDat = input->GetPointData();
+    dArr = pDat->GetScalars();
 
-    //vtkNew<vtkPointData> pointData;
-    //vtkSmartPointer<vtkPointData> pointData = vtkSmartPointer<vtkPointData>::New();
-  
-    //pointData->setpoi
+    vtkVariant* var = nullptr;
 
-    //pointData = input->GetPointData();
-    vtkNew<vtkPoints> points;
+    printf("%d\n", this->ids->GetSize());
+    
+    printf("%d\n", input->GetNumberOfPoints());
 
-    // Store the id's for all the coronary artery
-    vtkNew<vtkIntArray> ids;
 
-    // Iterate through all points in the imageData
-    for (int i = 0; i < input->GetNumberOfPoints(); i++)
+
+    // Update ImageData corresponding to ids
+    /*for (int i = 0; i < 10000; i++)
     {
-        printf("%d %f\n", i,input->GetPointData()->GetScalars()->GetTuple(i));
-        if (input->GetPointData()->GetScalars()->GetVariantValue(i) == 2)
-        {
-            ids->InsertNextTuple1(i);
-            
-        }
-        
-    }
-       
+        int a = ids->GetValue(i);
+        printf("%d %d\n", i, a);
+        dArr->SetVariantValue(a, 0.0);
+              
+    }*/
 
-    this->volumeMapper->SetInputConnection(reader->GetOutputPort());
+    vtkSmartPointer<vtkMetaImageWriter> writer = vtkSmartPointer<vtkMetaImageWriter>::New();
+    writer->AddInputData(input);
+    writer->SetFileName("c:\\users\\danie\\documents\\anon-meta cropped2.mha");
+    writer->Write();
+
+
+    //this->volumeMapper->SetInputConnection(reader->GetOutputPort());
+
+    this->volumeMapper->SetInputData(input);
 
     //this->UpdateTransferFunction(VisualizationController::Fluoro);
     this->volume->SetMapper(this->volumeMapper);
@@ -278,6 +281,55 @@ void VisualizationController::LoadVolume(std::string fileName)
 
 
 }
+
+// Return an int array of point Id's which belong to a certain label
+void VisualizationController::GetSegmentationPoints(std::string name, double label)
+{
+    std::string fileName = this->dataRepository->GetVolumeFileNameFromId(name);
+
+    vtkAlgorithm *reader = nullptr;
+    vtkImageData *input = nullptr;
+    vtkPointData *pDat = nullptr;
+    vtkDataArray *dArr = nullptr;
+
+    // Store the point id's corresponding to label
+    double pointLabelValue;
+
+    vtkSmartPointer<vtkMetaImageReader> metaReader = vtkSmartPointer<vtkMetaImageReader>::New();
+    metaReader->SetFileName(fileName.c_str());
+    metaReader->Update();
+    input = metaReader->GetOutput();
+    reader = metaReader;
+
+    pDat = input->GetPointData();
+    dArr = pDat->GetScalars(); 
+
+    // Iterate through all points in the imageData
+    for (int i = 0; i < 1000000; i++)
+    {
+        pointLabelValue = dArr->GetVariantValue(i).ToDouble();
+
+        if (pointLabelValue == label)
+        {
+            ids->InsertNextTuple1(i);
+
+        }
+    }
+
+
+
+
+    ofstream myfile;
+    myfile.open("C:\\users\\danie\\documents\\test1.csv");
+
+    for (int i = 0; i <ids->GetSize(); i++)
+    {
+        myfile << ids->GetValue(i) << "\n";
+    }
+
+    myfile.close();
+
+}
 void VisualizationController::Zoom(int value)
 {
     this->zoomFactor = 10*value;
@@ -285,14 +337,9 @@ void VisualizationController::Zoom(int value)
 void VisualizationController::ZoomFOV(int value)
 {
     // Move the camera closer to the Field of View in order to increase the apparent size
-
-    if (value % 10 == 0)
-    {
-        this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
-        this->foregroundRenderer->ResetCameraClippingRange();
-    }
-
-    
+    this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
+    this->foregroundRenderer->ResetCameraClippingRange();
+   
 }
 
 void VisualizationController::UpdateTransferFunction(int preset)

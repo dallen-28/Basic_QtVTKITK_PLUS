@@ -335,6 +335,13 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QRadioButton" name="heartButton">
+         <property name="text">
+          <string>Heart Fluoro</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>

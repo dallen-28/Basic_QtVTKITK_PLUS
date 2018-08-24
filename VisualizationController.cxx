@@ -53,11 +53,10 @@ void VisualizationController::LoadVolumes(std::string configFile)
     //this->LoadMesh("CTVolume");
 
     // Get point id's from labelmap corresponding to label value
-    this->GetSegmentationPoints("LabelMap", 5.0);
+    //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
-
-    //this->LoadMesh("SurfaceMesh");
-    //this->DisplayCoordinateAxes();
+    this->LoadMesh("SurfaceMesh");
+    this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
@@ -118,13 +117,11 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     this->camera2Transform->Identity();
     this->camera2Transform->PostMultiply();
     
-
-
     // Arbitrary distance to view Full 3D surface Mesh
-    this->cameraTransform->Translate(0, 0, -800);
+    this->cameraTransform->Translate(0, 0, 800);
    
     // Radius of the C-ARM (Must figure out relation between real world CARM radius and VTK Coordinates)
-    this->camera2Transform->Translate(0, 0, -800 + zoomFactor);
+    this->camera2Transform->Translate(0, 0, 800 - zoomFactor);
 
     // Rotate camera according to rotation matrix received from C-ARM accelerometer 
     this->cameraTransform->Concatenate(this->dataRepository->accelerometerToTracker);
@@ -134,25 +131,26 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     this->cameraTransform->Concatenate(this->dataRepository->accelerometerToCT);
     this->camera2Transform->Concatenate(this->dataRepository->accelerometerToCT);
 
-    this->cameraTransform->Translate(0, 0, a[1] - 349);
+    this->cameraTransform->Translate(0, 0, a[1]);
     this->cameraTransform->Update();
 
-    //this->camera2Transform->Translate(0, 0, a[1] - 349);
+    this->camera2Transform->Translate(0, 0, a[1]);
     this->camera2Transform->Update();
 
     this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
-    this->ren->GetActiveCamera()->SetFocalPoint(0, -100, a[1] - 175);
+    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, a[1]);
     this->cameraTransform->MultiplyPoint(up, out);
     this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
-    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1]);
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
+
+
 
     this->ren->ResetCameraClippingRange();
     this->ren2->ResetCameraClippingRange();
     
-
     delete[] a;
 }
 void VisualizationController::EditMeshColour(int r, int g, int b)
@@ -208,8 +206,6 @@ void VisualizationController::LoadMesh(std::string id)
     this->surfaceMesh->SetMapper(mapper);
     this->ren->AddActor(this->surfaceMesh);
 
-    this->surfaceMesh->SetPosition(0, 100, 0);
-
     this->ren->ResetCamera();
     this->ren->ResetCameraClippingRange();
 
@@ -225,31 +221,6 @@ void VisualizationController::LoadVolume(std::string fileName)
     metaReader->Update();
     input = metaReader->GetOutput();
     reader = metaReader;
-      
-    pDat = input->GetPointData();
-    dArr = pDat->GetScalars();
-
-    vtkVariant* var = nullptr;
-
-    printf("%d\n", this->ids->GetSize());
-    
-    printf("%d\n", input->GetNumberOfPoints());
-
-
-
-    // Update ImageData corresponding to ids
-    /*for (int i = 0; i < 10000; i++)
-    {
-        int a = ids->GetValue(i);
-        printf("%d %d\n", i, a);
-        dArr->SetVariantValue(a, 0.0);
-              
-    }*/
-
-    vtkSmartPointer<vtkMetaImageWriter> writer = vtkSmartPointer<vtkMetaImageWriter>::New();
-    writer->AddInputData(input);
-    writer->SetFileName("c:\\users\\danie\\documents\\anon-meta cropped2.mha");
-    writer->Write();
 
 
     //this->volumeMapper->SetInputConnection(reader->GetOutputPort());
@@ -264,7 +235,8 @@ void VisualizationController::LoadVolume(std::string fileName)
 
     // Spine is facing down by default; set to face up
     //this->volume->SetOrientation(0, 0, 180);
-    this->volume->SetPosition(0, -100, 174);
+    //this->volume->SetPosition(0, -100, 174);
+    //this->volume->SetPosition(195, 0, 0);
 
     this->ren2->ResetCamera();
     this->ren2->ResetCameraClippingRange();
@@ -278,8 +250,6 @@ void VisualizationController::LoadVolume(std::string fileName)
     foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500);
     foregroundRenderer->ResetCameraClippingRange();
     foregroundRenderer->InteractiveOff();
-
-
 }
 
 // Return an int array of point Id's which belong to a certain label
@@ -312,23 +282,8 @@ void VisualizationController::GetSegmentationPoints(std::string name, double lab
         if (pointLabelValue == label)
         {
             ids->InsertNextTuple1(i);
-
         }
     }
-
-
-
-
-    ofstream myfile;
-    myfile.open("C:\\users\\danie\\documents\\test1.csv");
-
-    for (int i = 0; i <ids->GetSize(); i++)
-    {
-        myfile << ids->GetValue(i) << "\n";
-    }
-
-    myfile.close();
-
 }
 void VisualizationController::Zoom(int value)
 {
@@ -339,14 +294,12 @@ void VisualizationController::ZoomFOV(int value)
     // Move the camera closer to the Field of View in order to increase the apparent size
     this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
     this->foregroundRenderer->ResetCameraClippingRange();
-   
 }
 
 void VisualizationController::UpdateTransferFunction(int preset)
 {
     colorFun->RemoveAllPoints();
     opacityFun->RemoveAllPoints();
-
 
     if (preset == VisualizationController::Fluoro)
     {
@@ -359,6 +312,10 @@ void VisualizationController::UpdateTransferFunction(int preset)
     else if (preset == VisualizationController::Bone)
     {
         this->SetToBone();
+    }
+    else if (preset == VisualizationController::Heart)
+    {
+        this->SetToHeartFluoro();
     }
 
 
@@ -429,6 +386,31 @@ void VisualizationController::SetToBone()
 
     this->ren2->SetBackground(0, 0, 0);
 }
+void VisualizationController::SetToHeartFluoro()
+{
+    //colorFun->AddRGBPoint()
+
+    opacityFun->AddPoint(1343, 0);
+    opacityFun->AddPoint(1375, 0);
+    opacityFun->AddPoint(1787.342, 0);
+    opacityFun->AddPoint(3475.842, 0.111111119389534);
+    opacityFun->AddPoint(4720, 1);
+
+    colorFun->AddRGBPoint(1343, 0, 0, 0);
+    colorFun->AddRGBPoint(1375, 0, 0, 0);
+    colorFun->AddRGBPoint(2327.389, 0.25, 0.25, 0.25);
+    colorFun->AddRGBPoint(2799.075, 0.5, 0.5, 0.5);
+    colorFun->AddRGBPoint(4125.265, 0.753, 0.753, 0.753);
+    colorFun->AddRGBPoint(4419.21435546875, 1, 1, 1);
+    colorFun->AddRGBPoint(4720, 1, 1, 1);
+
+
+    volumeMapper->SetBlendModeToComposite();
+    volumeProperty->ShadeOff();
+
+    this->ren2->SetBackground(.9, .9, .9);
+}
+
 void VisualizationController::DisplayCoordinateAxes()
 {
     vtkNew<vtkCylinderSource> cylinderx;

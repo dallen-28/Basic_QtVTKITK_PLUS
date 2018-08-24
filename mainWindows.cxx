@@ -200,6 +200,7 @@ void basic_QtVTK::SetupQTObjects()
     connect(fluoroButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToFluoro(bool)));
     connect(bonesButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToBones(bool)));
     connect(xRayButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToXray(bool)));
+    connect(heartButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToHeartFluoro(bool)));
     connect(zoomSlider, SIGNAL(valueChanged(int)), this, SLOT(Zoom(int)));
     connect(fieldOfViewSlider, SIGNAL(valueChanged(int)), this, SLOT(ZoomFOV(int)));
     //connect(CollectDRRButton, SIGNAL(clicked()), this, SLOT(CollectDRR()));
@@ -277,6 +278,13 @@ void basic_QtVTK::ChangeToXray(bool checked)
 void basic_QtVTK::ChangeToFluoro(bool checked)
 {
     this->visualizationController->UpdateTransferFunction(VisualizationController::Fluoro);
+    this->Render();
+}
+
+// Change to Heeart Fluoro transfer function
+void basic_QtVTK::ChangeToHeartFluoro(bool checked)
+{
+    this->visualizationController->UpdateTransferFunction(VisualizationController::Heart);
     this->Render();
 }
 

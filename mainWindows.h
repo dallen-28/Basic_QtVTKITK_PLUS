@@ -110,6 +110,7 @@ public:
     void ChangeToBones(bool);
     void ChangeToFluoro(bool);
     void ChangeToXray(bool);
+    void ChangeToHeartFluoro(bool);
     void Zoom(int);
     void ZoomFOV(int);
 

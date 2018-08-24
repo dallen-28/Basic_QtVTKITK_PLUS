@@ -68,7 +68,8 @@ public:
     {
         Fluoro = 1,
         Xray,
-        Bone
+        Bone,
+        Heart
     };
 
     VisualizationController();
@@ -98,6 +99,7 @@ private:
     void SetToFluoro();
     void SetToXray();
     void SetToBone();
+    void SetToHeartFluoro();
     void DisplayCoordinateAxes();
     
     // Camera vectors

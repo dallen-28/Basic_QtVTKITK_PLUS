@@ -75,7 +75,6 @@ public:
     VisualizationController();
     ~VisualizationController();
 
-    // 
     void LoadVolumes(std::string);
     void StartTracker();
     void UpdateTracker();

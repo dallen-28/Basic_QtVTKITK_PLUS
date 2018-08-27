@@ -138,6 +138,7 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <QMessageBox>
 #include <QTimer>
 #include <QProcess>
+#include <QMovie>
 
 // cmath
 #include <cmath>
@@ -214,6 +215,8 @@ void basic_QtVTK::SetupQTObjects()
     deviceSetSelectorWidget->setMaximumWidth(200);
     verticalLayout_4->addWidget(deviceSetSelectorWidget);
 
+    this->deviceSetSelectorWidget->setMaximumHeight(200);
+
     // Add start Tracker button just below this widget
     verticalLayout_4->addWidget(trackerButton);
     connect(deviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
@@ -240,7 +243,25 @@ void basic_QtVTK::StartTracker(bool checked)
 
         this->openGLWidget->GetInteractor()->Disable();
         this->openGLWidget2->GetInteractor()->Disable();
+
+        // Change Button to show loading gif
+
+        /*QLabel* label = new QLabel();
+        verticalLayout_4->addWidget(label);
+        QMovie* movie = new QMovie("C:\\users\\danie\\Downloads\\ajax-loader.gif");
+        label->setMovie(movie);
+        label->show();
+        movie->start();
+        this->trackerWidget->render(label);
         this->visualizationController->StartTracker();
+        movie->stop();
+        label->hide();*/
+
+        this->trackerButton->setText(tr("Loading"));
+        this->Render();
+        this->visualizationController->StartTracker();
+        this->trackerButton->setText(tr("Start Tracker"));
+
         this->zoomSlider->setDisabled(false);
         this->zoomSlider->setValue(0);
 

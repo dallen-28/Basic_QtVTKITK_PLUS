@@ -13,7 +13,6 @@ DataRepository::DataRepository(std::string configFile)
         1,0,0,0,
         0,0,0,1 };
     this->accelerometerToCT->DeepCopy(m);
-
     this->ReadConfiguration(configFile);
 }
 

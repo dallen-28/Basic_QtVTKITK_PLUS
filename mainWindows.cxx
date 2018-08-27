@@ -238,8 +238,11 @@ void basic_QtVTK::StartTracker(bool checked)
     {
         LOG_INFO("START TRACKER");
 
+        this->openGLWidget->GetInteractor()->Disable();
+        this->openGLWidget2->GetInteractor()->Disable();
         this->visualizationController->StartTracker();
         this->zoomSlider->setDisabled(false);
+        this->zoomSlider->setValue(0);
 
         // create a QTimer
         trackerTimer = new QTimer(this);
@@ -250,6 +253,9 @@ void basic_QtVTK::StartTracker(bool checked)
     {
         trackerTimer->stop();
         this->zoomSlider->setDisabled(true);
+
+        this->openGLWidget->GetInteractor()->Enable();
+        this->openGLWidget2->GetInteractor()->Enable();
     }
 }
 

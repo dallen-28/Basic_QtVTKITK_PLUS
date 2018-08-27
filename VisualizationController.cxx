@@ -56,14 +56,12 @@ void VisualizationController::LoadVolumes(std::string configFile)
     //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
     this->LoadMesh("SurfaceMesh");
-    this->DisplayCoordinateAxes();
+    //this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
 {
-    this->ren->InteractiveOff();
-    //this->ren2->InteractiveOff();
-    this->foregroundRenderer->InteractiveOff();
+    this->zoomFactor = 0;
     this->dataRepository->StartDataCollection();
 }
 
@@ -146,8 +144,6 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1]);
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
-
-
     this->ren->ResetCameraClippingRange();
     this->ren2->ResetCameraClippingRange();
     
@@ -206,6 +202,10 @@ void VisualizationController::LoadMesh(std::string id)
     this->surfaceMesh->SetMapper(mapper);
     this->ren->AddActor(this->surfaceMesh);
 
+    // Center mesh
+    this->surfaceMesh->SetOrientation(0, 0, 180);
+    this->surfaceMesh->SetPosition(0, -35, -70);
+
     this->ren->ResetCamera();
     this->ren->ResetCameraClippingRange();
 
@@ -227,7 +227,7 @@ void VisualizationController::LoadVolume(std::string fileName)
 
     this->volumeMapper->SetInputData(input);
 
-    //this->UpdateTransferFunction(VisualizationController::Fluoro);
+    this->UpdateTransferFunction(VisualizationController::Fluoro);
     this->volume->SetMapper(this->volumeMapper);
     this->volume->SetProperty(this->volumeProperty);
 
@@ -437,14 +437,14 @@ void VisualizationController::DisplayCoordinateAxes()
     cylinderActory->SetMapper(mapper3);
     cylinderActorz->SetMapper(mapper4);
 
-    //this->ren->AddActor(cylinderActorx);
-    //this->ren->AddActor(cylinderActory);
-    //this->ren->AddActor(cylinderActorz);
+    this->ren->AddActor(cylinderActorx);
+    this->ren->AddActor(cylinderActory);
+    this->ren->AddActor(cylinderActorz);
 
 
-    this->ren2->AddActor(cylinderActorx);
-    this->ren2->AddActor(cylinderActory);
-    this->ren2->AddActor(cylinderActorz);
+    //this->ren2->AddActor(cylinderActorx);
+    //this->ren2->AddActor(cylinderActory);
+    //this->ren2->AddActor(cylinderActorz);
 
     // Red for X
     cylinderActorx->GetProperty()->SetColor(1, 0, 0);

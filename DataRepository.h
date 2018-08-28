@@ -16,6 +16,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkMatrix4x4.h>
 #include <vtkXMLDataElement.h>
+#include <vtkXMLDataParser.h>
 
 
 
@@ -35,6 +36,7 @@ public:
 
     // Return the full path name of the volume specified by ID
     std::string GetVolumeFileNameFromId(std::string);
+    vtkMatrix4x4 *GetMatrixFromId(std::string);
 
     // Return the full path name of the volume
     void StartDataCollection();

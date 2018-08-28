@@ -29,7 +29,7 @@ VisualizationController::VisualizationController()
     vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
     //reader1->SetFileName("Images\\FieldOfView.png");
-    reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
+    reader1->SetFileName("Images\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
     fieldOfViewCenter = 2500;
@@ -56,7 +56,7 @@ void VisualizationController::LoadVolumes(std::string configFile)
     //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
     this->LoadMesh("SurfaceMesh");
-    //this->DisplayCoordinateAxes();
+    this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
@@ -129,19 +129,20 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     this->cameraTransform->Concatenate(this->dataRepository->accelerometerToCT);
     this->camera2Transform->Concatenate(this->dataRepository->accelerometerToCT);
 
-    this->cameraTransform->Translate(0, 0, a[1]);
+    // TO DO: Find out gear ratio
+    this->cameraTransform->Translate(0, 0, a[1]/2.0);
     this->cameraTransform->Update();
 
-    this->camera2Transform->Translate(0, 0, a[1]);
+    this->camera2Transform->Translate(0, 0, a[1]/2.0);
     this->camera2Transform->Update();
 
     this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
-    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, a[1]);
+    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, a[1]/2.0);
     this->cameraTransform->MultiplyPoint(up, out);
     this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
-    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1]);
+    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1]/2.0);
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
     this->ren->ResetCameraClippingRange();
@@ -203,8 +204,12 @@ void VisualizationController::LoadMesh(std::string id)
     this->ren->AddActor(this->surfaceMesh);
 
     // Center mesh
-    this->surfaceMesh->SetOrientation(0, 0, 180);
-    this->surfaceMesh->SetPosition(0, -35, -70);
+    //this->surfaceMesh->SetOrientation(0, 0, 180);
+    //this->surfaceMesh->SetPosition(0, -35, -70);
+
+
+    vtkMatrix4x4 *matr = this->dataRepository->GetMatrixFromId(id);
+    this->surfaceMesh->SetUserMatrix(this->dataRepository->GetMatrixFromId(id));
 
     this->ren->ResetCamera();
     this->ren->ResetCameraClippingRange();
@@ -317,8 +322,6 @@ void VisualizationController::UpdateTransferFunction(int preset)
     {
         this->SetToHeartFluoro();
     }
-
-
 }
 void VisualizationController::SetToFluoro()
 {

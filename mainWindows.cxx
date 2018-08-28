@@ -226,10 +226,14 @@ void basic_QtVTK::SetupQTObjects()
 // Read config file and connect to devices
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
+    this->deleteOnePhantomPtButton->setText("ASD1");
+    this->trackerWidget->update();
+    this->deviceSetSelectorWidget->SetConnectButtonText("Loading");
     this->trackerButton->setDisabled(false);
     this->configFile = aConfigFile;
     this->visualizationController->LoadVolumes(this->configFile);
     this->Render();
+    this->deviceSetSelectorWidget->SetConnectButtonText("Load Phantom");
     this->fieldOfViewSlider->setDisabled(false);
 }
 
@@ -246,21 +250,16 @@ void basic_QtVTK::StartTracker(bool checked)
 
         // Change Button to show loading gif
 
-        /*QLabel* label = new QLabel();
+        QLabel* label = new QLabel();
         verticalLayout_4->addWidget(label);
         QMovie* movie = new QMovie("C:\\users\\danie\\Downloads\\ajax-loader.gif");
         label->setMovie(movie);
         label->show();
         movie->start();
-        this->trackerWidget->render(label);
-        this->visualizationController->StartTracker();
-        movie->stop();
-        label->hide();*/
-
-        this->trackerButton->setText(tr("Loading"));
         this->Render();
         this->visualizationController->StartTracker();
-        this->trackerButton->setText(tr("Start Tracker"));
+        movie->stop();
+        label->hide();
 
         this->zoomSlider->setDisabled(false);
         this->zoomSlider->setValue(0);
@@ -431,7 +430,7 @@ void basic_QtVTK::ResetPhantomCollectedPoints()
 // Delete the last collected point
 void basic_QtVTK::DeleteOnePhantomCollectedPoints()
 {
-
+    this->deleteOnePhantomPtButton->setText("ASD");
     LOG_INFO("delete");
 }
 

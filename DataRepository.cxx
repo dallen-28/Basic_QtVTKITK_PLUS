@@ -58,6 +58,29 @@ std::string DataRepository::GetVolumeFileNameFromId(std::string id)
     std::string name = volumeElement->GetAttribute("Path");
     return name; 
 }
+vtkMatrix4x4* DataRepository::GetMatrixFromId(std::string id)
+{
+    vtkSmartPointer<vtkXMLDataElement> volumeElement = vtkSmartPointer<vtkXMLDataElement>::New();
+
+    volumeElement = this->configRootElement->FindNestedElementWithNameAndAttribute("Volume", "Id", id.c_str());
+    std::string matr = volumeElement->GetAttribute("Matrix");
+    
+    std::istringstream iss(matr);
+    std::vector<std::string> results(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+
+    double *d = new double[16];
+    double a = 0;
+
+    for (int i = 0; i < 16; i++)
+    {
+        a = atof(results.at(i).c_str());
+        d[i] = a;
+ 
+    }
+    vtkMatrix4x4 *matrix = vtkMatrix4x4::New();
+    matrix->DeepCopy(d);
+    return matrix;
+}
 
 void DataRepository::StartDataCollection()
 {

@@ -341,7 +341,7 @@ void VisualizationController::SetToFluoro()
     opacityFun->AddPoint(3071, 0);
 
     volumeMapper->SetBlendModeToComposite();
-    volumeProperty->ShadeOff();
+    volumeProperty->ShadeOn();
 
     this->ren2->SetBackground(.9, .9, .9);
 }
@@ -353,8 +353,6 @@ void VisualizationController::SetToXray()
     colorFun->AddRGBPoint(998.206420898438, 0.752941176470588, 0.752941176470588, 0.752941176470588);
     colorFun->AddRGBPoint(2466.43505859375, 1, 1, 1);
     colorFun->AddRGBPoint(3071, 1, 1, 1);
-
-
 
     opacityFun->AddPoint(-3024, 0);
     opacityFun->AddPoint(-3024, 0);
@@ -406,7 +404,6 @@ void VisualizationController::SetToHeartFluoro()
     colorFun->AddRGBPoint(4125.265, 0.753, 0.753, 0.753);
     colorFun->AddRGBPoint(4419.21435546875, 1, 1, 1);
     colorFun->AddRGBPoint(4720, 1, 1, 1);
-
 
     volumeMapper->SetBlendModeToComposite();
     volumeProperty->ShadeOff();

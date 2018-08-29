@@ -159,10 +159,10 @@ basic_QtVTK::basic_QtVTK()
     this->visualizationController = new VisualizationController();
 
     // Connect VTK with Qt
-    //this->openGLWidget2->GetRenderWindow()->SetNumberOfLayers(2);
+    this->openGLWidget2->GetRenderWindow()->SetNumberOfLayers(2);
     //this->openGLWidget->GetRenderWindow()->AddRenderer(this->visualizationController->ren);
     this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->ren2);
-    //this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->foregroundRenderer);
+    this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->foregroundRenderer);
 
     // Set to Blue
     //this->visualizationController->ren->SetBackground(.1, .2, .4);

@@ -218,7 +218,13 @@ void basic_QtVTK::SetupQTObjects()
     this->deviceSetSelectorWidget->setMaximumHeight(200);
 
     // Add start Tracker button just below this widget
-    verticalLayout_4->addWidget(trackerButton);
+    verticalLayout_4->addLayout(this->horizontalLayout_2);
+    //verticalLayout_4->addWidget(this->trackerButton);
+    //verticalLayout_4->addWidget(this->loadingLabel);
+    //verticalLayout_4->addWidget(this->loadingLabel);
+    horizontalLayout_2->addWidget(this->trackerButton);
+    horizontalLayout_2->addWidget(this->loadingLabel);
+
     connect(deviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
     //connect(deviceSetSelectorWidget, SIGNAL(DeviceSetSelected(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
 }
@@ -250,16 +256,15 @@ void basic_QtVTK::StartTracker(bool checked)
 
         // Change Button to show loading gif
 
-        QLabel* label = new QLabel();
-        verticalLayout_4->addWidget(label);
-        QMovie* movie = new QMovie("C:\\users\\danie\\Downloads\\ajax-loader.gif");
-        label->setMovie(movie);
-        label->show();
+        //QMovie* movie = new QMovie("C:\\users\\danie\\Downloads\\ajax-loader.gif");
+        QMovie* movie = new QMovie("Images\\ajax-loader.gif");
+        this->loadingLabel->setMovie(movie);
+        this->loadingLabel->show();
         movie->start();
         this->Render();
         this->visualizationController->StartTracker();
         movie->stop();
-        label->hide();
+        this->loadingLabel->hide();
 
         this->zoomSlider->setDisabled(false);
         this->zoomSlider->setValue(0);

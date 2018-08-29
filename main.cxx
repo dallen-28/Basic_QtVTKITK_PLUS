@@ -50,9 +50,9 @@ POSSIBILITY OF SUCH DAMAGES.
 int main(int argc, char* argv[])
 {
     // needed to ensure appropriate OpenGL context is created for VTK rendering.
-    QSurfaceFormat surfaceFormat = QVTKOpenGLWidget::defaultFormat();
-    surfaceFormat.setSamples(0);
-    QSurfaceFormat::setDefaultFormat(surfaceFormat);
+    //QSurfaceFormat surfaceFormat = QVTKOpenGLWidget::defaultFormat();
+    //surfaceFormat.setSamples(0);
+    //QSurfaceFormat::setDefaultFormat(surfaceFormat);
 
     QApplication app(argc, argv);
 

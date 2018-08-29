@@ -28,8 +28,8 @@ VisualizationController::VisualizationController()
 
     vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
-    //reader1->SetFileName("Images\\FieldOfView.png");
     reader1->SetFileName("Images\\FieldOfView.png");
+    //reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
     fieldOfViewCenter = 2500;

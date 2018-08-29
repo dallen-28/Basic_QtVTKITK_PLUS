@@ -26,13 +26,13 @@ VisualizationController::VisualizationController()
     this->up[2] = 0.0;
     this->up[3] = 0.0;
 
-    vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
+    /*vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
     reader1->SetFileName("Images\\FieldOfView.png");
     //reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
-    fieldOfViewCenter = 2500;
+    fieldOfViewCenter = 2500;*/
 
     this->colorFun = vtkSmartPointer<vtkColorTransferFunction>::New();
     this->opacityFun = vtkSmartPointer<vtkPiecewiseFunction>::New();
@@ -247,14 +247,14 @@ void VisualizationController::LoadVolume(std::string fileName)
     this->ren2->ResetCameraClippingRange();
 
     // Layer the renderers accordingly
-    ren2->SetLayer(0);
-    foregroundRenderer->SetLayer(1);
+    //ren2->SetLayer(0);
+    //foregroundRenderer->SetLayer(1);
 
     // Center the foreground renderer camera at an initial distance from the FieldOfView 
-    foregroundRenderer->GetActiveCamera()->SetFocalPoint(fieldOfViewCenter, fieldOfViewCenter, 0);
+    /*foregroundRenderer->GetActiveCamera()->SetFocalPoint(fieldOfViewCenter, fieldOfViewCenter, 0);
     foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500);
     foregroundRenderer->ResetCameraClippingRange();
-    foregroundRenderer->InteractiveOff();
+    foregroundRenderer->InteractiveOff();*/
 }
 
 // Return an int array of point Id's which belong to a certain label
@@ -297,8 +297,8 @@ void VisualizationController::Zoom(int value)
 void VisualizationController::ZoomFOV(int value)
 {
     // Move the camera closer to the Field of View in order to increase the apparent size
-    this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
-    this->foregroundRenderer->ResetCameraClippingRange();
+    //this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
+    //this->foregroundRenderer->ResetCameraClippingRange();
 }
 
 void VisualizationController::UpdateTransferFunction(int preset)

@@ -159,13 +159,13 @@ basic_QtVTK::basic_QtVTK()
     this->visualizationController = new VisualizationController();
 
     // Connect VTK with Qt
-    this->openGLWidget2->GetRenderWindow()->SetNumberOfLayers(2);
-    this->openGLWidget->GetRenderWindow()->AddRenderer(this->visualizationController->ren);
+    //this->openGLWidget2->GetRenderWindow()->SetNumberOfLayers(2);
+    //this->openGLWidget->GetRenderWindow()->AddRenderer(this->visualizationController->ren);
     this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->ren2);
-    this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->foregroundRenderer);
+    //this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->foregroundRenderer);
 
     // Set to Blue
-    this->visualizationController->ren->SetBackground(.1, .2, .4);
+    //this->visualizationController->ren->SetBackground(.1, .2, .4);
 
     // Set to White
     this->visualizationController->ren2->SetBackground(.9, .9, .9);
@@ -178,7 +178,7 @@ basic_QtVTK::basic_QtVTK()
 // Render both sides
 void basic_QtVTK::Render()
 {
-    this->openGLWidget->GetRenderWindow()->Render();
+    //this->openGLWidget->GetRenderWindow()->Render();
     this->openGLWidget2->GetRenderWindow()->Render();
 }
 
@@ -217,14 +217,6 @@ void basic_QtVTK::SetupQTObjects()
 
     this->deviceSetSelectorWidget->setMaximumHeight(200);
 
-    // Add start Tracker button just below this widget
-    verticalLayout_4->addLayout(this->horizontalLayout_2);
-    //verticalLayout_4->addWidget(this->trackerButton);
-    //verticalLayout_4->addWidget(this->loadingLabel);
-    //verticalLayout_4->addWidget(this->loadingLabel);
-    horizontalLayout_2->addWidget(this->trackerButton);
-    horizontalLayout_2->addWidget(this->loadingLabel);
-
     connect(deviceSetSelectorWidget, SIGNAL(ConnectToDevicesByConfigFileInvoked(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
     //connect(deviceSetSelectorWidget, SIGNAL(DeviceSetSelected(std::string)), this, SLOT(ConnectToDevicesByConfigFile(std::string)));
 }
@@ -251,7 +243,7 @@ void basic_QtVTK::StartTracker(bool checked)
     {
         LOG_INFO("START TRACKER");
 
-        this->openGLWidget->GetInteractor()->Disable();
+        //this->openGLWidget->GetInteractor()->Disable();
         this->openGLWidget2->GetInteractor()->Disable();
 
         // Change Button to show loading gif
@@ -279,7 +271,7 @@ void basic_QtVTK::StartTracker(bool checked)
         trackerTimer->stop();
         this->zoomSlider->setDisabled(true);
 
-        this->openGLWidget->GetInteractor()->Enable();
+        //this->openGLWidget->GetInteractor()->Enable();
         this->openGLWidget2->GetInteractor()->Enable();
     }
 }

@@ -164,6 +164,7 @@ basic_QtVTK::basic_QtVTK()
     this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->ren2);
     this->openGLWidget2->GetRenderWindow()->AddRenderer(this->visualizationController->foregroundRenderer);
 
+
     // Set to Blue
     //this->visualizationController->ren->SetBackground(.1, .2, .4);
 
@@ -264,7 +265,7 @@ void basic_QtVTK::StartTracker(bool checked)
         // create a QTimer
         trackerTimer = new QTimer(this);
         connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateTrackerInfo()));
-        trackerTimer->start(0);       
+        trackerTimer->start(100);       
     }
     else
     {

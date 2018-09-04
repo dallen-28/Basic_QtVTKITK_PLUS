@@ -44,6 +44,9 @@
 #include <vtkVariant.h>
 #include <vtkMetaImageWriter.h>
 #include <vtkDelimitedTextWriter.h>
+#include <vtkExtractVOI.h>
+#include <vtkBorderWidget.h>
+#include <vtkViewport.h>
 
 //stdlib includes
 #include <math.h>

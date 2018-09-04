@@ -55,8 +55,11 @@ void VisualizationController::LoadVolumes(std::string configFile)
     // Get point id's from labelmap corresponding to label value
     //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
+
+
+
     //this->LoadMesh("SurfaceMesh");
-    this->DisplayCoordinateAxes();
+    //this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
@@ -146,10 +149,10 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
     this->ren->ResetCameraClippingRange();
-    //this->ren2->ResetCameraClippingRange();
+    this->ren2->ResetCameraClippingRange();
 
-    this->ren2->GetActiveCamera()->SetClippingRange(0.9, 700);
-    this->ren2->SetClippingRangeExpansion(123);
+    //this->ren2->GetActiveCamera()->SetClippingRange(100, 700);
+    //this->ren2->ResetCameraClippingRange(0.0, 0.1, 0.0, 0.1, 0.0, 0.0);
 
     
     delete[] a;
@@ -230,11 +233,21 @@ void VisualizationController::LoadVolume(std::string fileName)
     metaReader->Update();
     input = metaReader->GetOutput();
     reader = metaReader;
+    /*vtkNew<vtkExtractVOI> extract;
+    extract->SetInputData(input);
+    extract->SetVOI(0, 500, 0, 500, 100, 250); 
+    extract->Update();*/
+
+    //this->ren2->SetViewport(0.0, 1.0, 0.0, 1.0);
+    //input->SetDimensions(100, 100, 100);
+    //input->SetSpacing(1.35599548, 1.35599548, 2.18399272);
+    //input->SetExtent(0, 200, 0, 200, 0, 200);
 
 
     //this->volumeMapper->SetInputConnection(reader->GetOutputPort());
 
     this->volumeMapper->SetInputData(input);
+    //this->volumeMapper->SetInputConnection(extract->GetOutputPort());
 
     this->UpdateTransferFunction(VisualizationController::Fluoro);
     this->volume->SetMapper(this->volumeMapper);
@@ -302,6 +315,16 @@ void VisualizationController::ZoomFOV(int value)
 {
     // Move the camera closer to the Field of View in order to increase the apparent size
     this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
+
+    double percentage = (value + 60) / 100.0;
+    double xmax = percentage;
+    double ymax = percentage;
+    double xmin = 1 - percentage;
+    double ymin = 1 - percentage;
+
+    ren2->SetViewport(xmin, ymin, xmax, ymax);
+
+
     this->foregroundRenderer->ResetCameraClippingRange();
 }
 
@@ -444,14 +467,14 @@ void VisualizationController::DisplayCoordinateAxes()
     cylinderActory->SetMapper(mapper3);
     cylinderActorz->SetMapper(mapper4);
 
-    this->ren->AddActor(cylinderActorx);
-    this->ren->AddActor(cylinderActory);
-    this->ren->AddActor(cylinderActorz);
+    //this->ren->AddActor(cylinderActorx);
+    //this->ren->AddActor(cylinderActory);
+    //this->ren->AddActor(cylinderActorz);
 
 
-    //this->ren2->AddActor(cylinderActorx);
-    //this->ren2->AddActor(cylinderActory);
-    //this->ren2->AddActor(cylinderActorz);
+    this->ren2->AddActor(cylinderActorx);
+    this->ren2->AddActor(cylinderActory);
+    this->ren2->AddActor(cylinderActorz);
 
     // Red for X
     cylinderActorx->GetProperty()->SetColor(1, 0, 0);

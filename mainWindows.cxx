@@ -265,7 +265,7 @@ void basic_QtVTK::StartTracker(bool checked)
         // create a QTimer
         trackerTimer = new QTimer(this);
         connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateTrackerInfo()));
-        trackerTimer->start(100);       
+        trackerTimer->start(0);       
     }
     else
     {

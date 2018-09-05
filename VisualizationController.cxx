@@ -28,8 +28,8 @@ VisualizationController::VisualizationController()
 
     vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
-    reader1->SetFileName("Images\\FieldOfView.png");
-    //reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
+    //reader1->SetFileName("Images\\FieldOfView.png");
+    reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
     fieldOfViewCenter = 2500;
@@ -56,7 +56,7 @@ void VisualizationController::LoadVolumes(std::string configFile)
     //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
     this->LoadMesh("SurfaceMesh");
-    this->DisplayCoordinateAxes();
+    //this->DisplayCoordinateAxes();
 }
 
 void VisualizationController::StartTracker()
@@ -325,7 +325,7 @@ void VisualizationController::UpdateTransferFunction(int preset)
 }
 void VisualizationController::SetToFluoro()
 {
-    colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
+    /*colorFun->AddRGBPoint(-3010, 0, 0, 0, 0, 0);
     colorFun->AddRGBPoint(-1592.78540039063, 0.250980392156863, 0.250980392156863, 0.250980392156863);
     colorFun->AddRGBPoint(-124.556709289551, 0.501960784313725, 0.501960784313725, 0.501960784313725);
     colorFun->AddRGBPoint(998.206420898438, 0.752941176470588, 0.752941176470588, 0.752941176470588);
@@ -341,9 +341,29 @@ void VisualizationController::SetToFluoro()
     opacityFun->AddPoint(3071, 0);
 
     volumeMapper->SetBlendModeToComposite();
-    volumeProperty->ShadeOn();
+    volumeProperty->ShadeOff();
+
+    this->ren2->SetBackground(.9, .9, .9);*/
+
+    colorFun->AddRGBPoint(-3024, 0, 0, 0);
+    colorFun->AddRGBPoint(267.1167, 0, 0, 0);
+    colorFun->AddRGBPoint(536.496398925781, 0.250980392156863, 0.250980392156863, 0.250980392156863);
+    colorFun->AddRGBPoint(864.436828613281, 0.501960784313725, 0.501960784313725, 0.501960784313725);
+    colorFun->AddRGBPoint(1274.36242675781, 0.752941176470588, 0.752941176470588, 0.752941176470588);
+    colorFun->AddRGBPoint(1696, 1, 1, 1);
+    colorFun->AddRGBPoint(1696, 1, 1, 1);
+
+    opacityFun->AddPoint(-3024, 0);
+    opacityFun->AddPoint(150, 0);
+    opacityFun->AddPoint(1520.31775, 0.126984134316444);
+    opacityFun->AddPoint(1696, 1);
+    opacityFun->AddPoint(1696, 1);
+
+    volumeMapper->SetBlendModeToComposite();
+    volumeProperty->ShadeOff();
 
     this->ren2->SetBackground(.9, .9, .9);
+
 }
 void VisualizationController::SetToXray()
 {
@@ -391,7 +411,7 @@ void VisualizationController::SetToHeartFluoro()
 {
     //colorFun->AddRGBPoint()
 
-    opacityFun->AddPoint(1343, 0);
+    /*opacityFun->AddPoint(1343, 0);
     opacityFun->AddPoint(1375, 0);
     opacityFun->AddPoint(1787.342, 0);
     opacityFun->AddPoint(3475.842, 0.111111119389534);
@@ -408,7 +428,27 @@ void VisualizationController::SetToHeartFluoro()
     volumeMapper->SetBlendModeToComposite();
     volumeProperty->ShadeOff();
 
+    this->ren2->SetBackground(.9, .9, .9);*/
+
+    colorFun->AddRGBPoint(1343, 0, 0, 0);
+    colorFun->AddRGBPoint(2831.6748046875, 0, 0, 0);
+    colorFun->AddRGBPoint(3357.4912109375, 0.250980392156863, 0.250980392156863, 0.250980392156863);
+    colorFun->AddRGBPoint(3644.30029296875, 0.501960784313725, 0.501960784313725, 0.501960784313725);
+    colorFun->AddRGBPoint(3815.01977539063, 0.752941176470588, 0.752941176470588, 0.752941176470588);
+    colorFun->AddRGBPoint(4033.54077148438, 1, 1, 1);
+    colorFun->AddRGBPoint(4095, 1, 1, 1);
+
+    opacityFun->AddPoint(1343, 0);
+    opacityFun->AddPoint(1896.131, 0);
+    opacityFun->AddPoint(3063.85, 0.0634920671582222);
+    opacityFun->AddPoint(3562.35473632813, 0.222222238779068);
+    opacityFun->AddPoint(4095, 1);
+
+    volumeMapper->SetBlendModeToComposite();
+    volumeProperty->ShadeOff();
+
     this->ren2->SetBackground(.9, .9, .9);
+
 }
 
 void VisualizationController::DisplayCoordinateAxes()

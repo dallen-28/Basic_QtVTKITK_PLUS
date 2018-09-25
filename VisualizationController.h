@@ -92,8 +92,10 @@ public:
 private:
     double *RotationMatrixToEulerAngles(vtkMatrix4x4* R);
     void SetCamerasUsingWitMotionTracker();
+    void UpdateNeedle();
     void LoadMesh(std::string);
     void LoadVolume(std::string);
+    void LoadNeedle(std::string);
     void GetSegmentationPoints(std::string, double);
     void SetToFluoro();
     void SetToXray();
@@ -115,6 +117,7 @@ private:
 
     // VTK Scene
     vtkSmartPointer<vtkActor>                   surfaceMesh;
+    vtkSmartPointer<vtkActor>                   needle;
     vtkSmartPointer<vtkVolume>                  volume;
     vtkSmartPointer<vtkIntArray>                ids;
     vtkSmartPointer<vtkTransform>               cameraTransform;

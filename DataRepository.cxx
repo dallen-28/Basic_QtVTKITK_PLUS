@@ -6,6 +6,7 @@ DataRepository::DataRepository(std::string configFile)
     this->transformRepository = vtkSmartPointer<vtkPlusTransformRepository>::New();
     this->accelerometerToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
     this->accelerometer2ToTracker = vtkSmartPointer<vtkMatrix4x4>::New();
+    this->needleToWebcam = vtkSmartPointer<vtkMatrix4x4>::New();
     this->configRootElement = vtkSmartPointer<vtkXMLDataElement>::New();
     this->accelerometerToCT = vtkSmartPointer<vtkMatrix4x4>::New();
     double m[16] = { 0,1,0,0,
@@ -42,6 +43,7 @@ void DataRepository::ReadConfiguration(std::string configFile)
     // Set transform names
     accelerometerToTrackerName.SetTransformName("AccelToTracker");
     accelerometer2ToTrackerName.SetTransformName("AccelToTracker2");
+    needleToWebcamName.SetTransformName("Marker0ToWebcam");
 }
   
 
@@ -61,11 +63,18 @@ std::string DataRepository::GetVolumeFileNameFromId(std::string id)
 vtkMatrix4x4* DataRepository::GetMatrixFromId(std::string id)
 {
     vtkSmartPointer<vtkXMLDataElement> volumeElement = vtkSmartPointer<vtkXMLDataElement>::New();
+    vtkMatrix4x4 *matrix = vtkMatrix4x4::New();
 
     volumeElement = this->configRootElement->FindNestedElementWithNameAndAttribute("Volume", "Id", id.c_str());
-    std::string matr = volumeElement->GetAttribute("Matrix");
+    std::string matrixString = volumeElement->GetAttribute("Matrix");
+
+    if (matrixString == "0")
+    {
+        matrix->Identity();
+        return matrix;
+    }
     
-    std::istringstream iss(matr);
+    std::istringstream iss(matrixString);
     std::vector<std::string> results(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
 
     double *d = new double[16];
@@ -77,33 +86,42 @@ vtkMatrix4x4* DataRepository::GetMatrixFromId(std::string id)
         d[i] = a;
  
     }
-    vtkMatrix4x4 *matrix = vtkMatrix4x4::New();
+
     matrix->DeepCopy(d);
     return matrix;
 }
 
 void DataRepository::StartDataCollection()
 {
-    vtkPlusDevice* trackerDevice;
-    vtkPlusDevice* trackerDevice2;
+    vtkPlusDevice* accelerometerDevice;
+    vtkPlusDevice* accelerometer2Device;
+    vtkPlusDevice* webcamDevice;
     vtkPlusDevice* mixerDevice;
 
     // Get Accelerometer1
-    if (dataCollector->GetDevice(trackerDevice, "TrackerDevice") != PLUS_SUCCESS)
+    if (dataCollector->GetDevice(accelerometerDevice, "TrackerDevice") != PLUS_SUCCESS)
     {
         LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice\". Check config file.");
         exit;
     }
-    this->myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice);
+    this->myAccelerometer = dynamic_cast<vtkPlusWitMotionTracker*>(accelerometerDevice);
 
     // Get Accelerometer2
-    if (dataCollector->GetDevice(trackerDevice2, "TrackerDevice2") != PLUS_SUCCESS)
+    if (dataCollector->GetDevice(accelerometer2Device, "TrackerDevice2") != PLUS_SUCCESS)
     {
         LOG_ERROR("Unable to locate the device with ID = \"TrackerDevice2\". Check config file.");
         exit;
     }
 
-    this->myAccelerometer2 = dynamic_cast<vtkPlusWitMotionTracker*>(trackerDevice2);
+    this->myAccelerometer2 = dynamic_cast<vtkPlusWitMotionTracker*>(accelerometer2Device);
+
+    if (dataCollector->GetDevice(webcamDevice, "WebcamDevice") != PLUS_SUCCESS)
+    {
+        LOG_ERROR("Unable to locate the device with ID = \"WebcamDevice\". Check config file.");
+        exit;
+    }
+
+    this->myWebcam = dynamic_cast<vtkPlusOpticalMarkerTracker*>(webcamDevice);
 
     // Get Mixer
     if (dataCollector->GetDevice(mixerDevice, "TrackedVideoDevice") != PLUS_SUCCESS)
@@ -157,6 +175,11 @@ void DataRepository::GetTransforms()
     if (this->transformRepository->GetTransform(accelerometer2ToTrackerName, accelerometer2ToTracker, &isValid) != PLUS_SUCCESS)
     {
         LOG_ERROR("Failed to get accelerometer2ToTracker transform");
+        exit;
+    }
+    if (this->transformRepository->GetTransform(needleToWebcamName, needleToWebcam, &isValid) != PLUS_SUCCESS)
+    {
+        LOG_ERROR("Failed to get Marker0ToWebcam transform");
         exit;
     }
 }

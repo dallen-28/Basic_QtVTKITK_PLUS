@@ -8,6 +8,7 @@
 #include <vtkPlusWitMotionTracker.h>
 #include <vtkPlusVirtualMixer.h>
 #include <vtkPlusNDITracker.h>
+#include <vtkPlusOpticalMarkerTracker.h>
 #include <vtkPlusDevice.h>
 #include <vtkPlusTransformRepository.h>
 #include <vtkPlusDataCollector.h>
@@ -30,6 +31,7 @@ public:
     vtkSmartPointer<vtkMatrix4x4>                       accelerometerToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       accelerometer2ToTracker;
     vtkSmartPointer<vtkMatrix4x4>                       accelerometerToCT;
+    vtkSmartPointer<vtkMatrix4x4>                       needleToWebcam;
 
     DataRepository(std::string);
     ~DataRepository();
@@ -61,6 +63,9 @@ private:
     // Track table Z Translation
     vtkPlusWitMotionTracker                             *myAccelerometer2;
 
+    // Webcam Tracker
+    vtkPlusOpticalMarkerTracker                         *myWebcam;
+
     // MixerDevice to combine tracker frames
     // from multiple devices into one channel;
     vtkPlusVirtualMixer                                 *myMixer;
@@ -74,5 +79,6 @@ private:
     // Transform Names
     PlusTransformName                                   accelerometerToTrackerName;
     PlusTransformName                                   accelerometer2ToTrackerName;
+    PlusTransformName                                   needleToWebcamName;
        
 };

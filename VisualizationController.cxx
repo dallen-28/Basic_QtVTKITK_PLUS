@@ -20,6 +20,16 @@ VisualizationController::VisualizationController()
     this->cameraTransform = vtkSmartPointer<vtkTransform>::New();
     this->camera2Transform = vtkSmartPointer<vtkTransform>::New();
     
+    // Create Needle
+    vtkNew<vtkCylinderSource> cylinder;
+    cylinder->SetRadius(2.0);
+    cylinder->SetHeight(68.0);
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputConnection(cylinder->GetOutputPort());
+    this->needle = vtkSmartPointer<vtkActor>::New();
+    this->needle->SetMapper(mapper);
+    this->ren2->AddActor(needle);
+    
     // Set camera up direction to +x
     this->up[0] = 1.0;
     this->up[1] = 0.0;
@@ -56,6 +66,7 @@ void VisualizationController::LoadVolumes(std::string configFile)
     //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
     this->LoadMesh("SurfaceMesh");
+    this->LoadNeedle("NeedleModel");
     //this->DisplayCoordinateAxes();
 }
 
@@ -69,6 +80,7 @@ void VisualizationController::UpdateTracker()
 {
     this->dataRepository->GetTransforms();
     this->SetCamerasUsingWitMotionTracker();
+    this->UpdateNeedle();
 }
 
 double* VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
@@ -145,14 +157,66 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1]/2.0);
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
+
     this->ren->ResetCameraClippingRange();
     this->ren2->ResetCameraClippingRange();
     
     delete[] a;
 }
+void VisualizationController::UpdateNeedle()
+{
+    vtkNew<vtkTransform> needleTransform;
+
+    vtkNew<vtkMatrix4x4> calibTransform;
+    vtkNew<vtkMatrix4x4> calibTransform2;
+
+    double m[16] = { 0.97, 0.0, -0.23, 0.24,
+                    -0.23, -0.02, -0.97, -140.78,
+                    0.0, 1.0, -0.02, -0.68,
+                    0.0, 0.0, 0.0, 1.0 };
+    double m1[16] = { 1.0, 0.0, 0.0, 0.0,
+                     0.0, -1.0, 0.0, 0.0,
+                    0.0, 0.0, -1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0 };
+    calibTransform->DeepCopy(m);
+    calibTransform2->DeepCopy(m1);
+
+    needleTransform->Identity();
+    needleTransform->PostMultiply();
+    needleTransform->Concatenate(this->dataRepository->needleToWebcam);
+    needleTransform->Concatenate(calibTransform);
+    needleTransform->Concatenate(calibTransform2);
+    this->needle->SetUserTransform(needleTransform);
+}
 void VisualizationController::EditMeshColour(int r, int g, int b)
 {
     this->surfaceMesh->GetProperty()->SetColor((double)r / 255.0, (double)g / 255.0, (double)b / 255.0);
+}
+
+void VisualizationController::LoadNeedle(std::string id)
+{
+    std::string fileName = this->dataRepository->GetVolumeFileNameFromId(id);
+    vtkPolyData *data;
+
+    QFileInfo info(QString::fromStdString(fileName));
+
+    // parse the file extension and use the appropriate reader
+    if (info.suffix() == QString("vtk"))
+    {
+        data = readAnPolyData<vtkPolyDataReader >(fileName.c_str());
+    }
+
+    // For needle rendering 
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputData(data);
+
+    this->needle->SetMapper(mapper);
+    this->ren2->AddActor(this->needle);
+
+    this->needle->GetProperty()->SetColor(0, 0, 0);
+
+    this->ren2->ResetCamera();
+    this->ren2->ResetCameraClippingRange();
 }
 void VisualizationController::LoadMesh(std::string id)
 {
@@ -196,19 +260,12 @@ void VisualizationController::LoadMesh(std::string id)
         return;
     }
 
-    // For surface mesh rendering
+    // For surface mesh rendering  
     vtkNew<vtkPolyDataMapper> mapper;
-
     mapper->SetInputData(data);
+
     this->surfaceMesh->SetMapper(mapper);
     this->ren->AddActor(this->surfaceMesh);
-
-    // Center mesh
-    //this->surfaceMesh->SetOrientation(0, 0, 180);
-    //this->surfaceMesh->SetPosition(0, -35, -70);
-
-
-    vtkMatrix4x4 *matr = this->dataRepository->GetMatrixFromId(id);
     this->surfaceMesh->SetUserMatrix(this->dataRepository->GetMatrixFromId(id));
 
     this->ren->ResetCamera();

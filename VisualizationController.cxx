@@ -21,14 +21,14 @@ VisualizationController::VisualizationController()
     this->camera2Transform = vtkSmartPointer<vtkTransform>::New();
     
     // Create Needle
-    vtkNew<vtkCylinderSource> cylinder;
+    /*vtkNew<vtkCylinderSource> cylinder;
     cylinder->SetRadius(2.0);
     cylinder->SetHeight(68.0);
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(cylinder->GetOutputPort());
     this->needle = vtkSmartPointer<vtkActor>::New();
     this->needle->SetMapper(mapper);
-    this->ren2->AddActor(needle);
+    this->ren2->AddActor(needle);*/
     
     // Set camera up direction to +x
     this->up[0] = 1.0;
@@ -66,7 +66,7 @@ void VisualizationController::LoadVolumes(std::string configFile)
     //this->GetSegmentationPoints("LabelMap", 5.0);
     this->LoadMesh("CTVolume");
     this->LoadMesh("SurfaceMesh");
-    this->LoadNeedle("NeedleModel");
+    //this->LoadNeedle("NeedleModel");
     //this->DisplayCoordinateAxes();
 }
 
@@ -80,7 +80,7 @@ void VisualizationController::UpdateTracker()
 {
     this->dataRepository->GetTransforms();
     this->SetCamerasUsingWitMotionTracker();
-    this->UpdateNeedle();
+    //this->UpdateNeedle();
 }
 
 double* VisualizationController::RotationMatrixToEulerAngles(vtkMatrix4x4 * R)
@@ -165,7 +165,7 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
 }
 void VisualizationController::UpdateNeedle()
 {
-    vtkNew<vtkTransform> needleTransform;
+    /*vtkNew<vtkTransform> needleTransform;
 
     vtkNew<vtkMatrix4x4> calibTransform;
     vtkNew<vtkMatrix4x4> calibTransform2;
@@ -185,8 +185,8 @@ void VisualizationController::UpdateNeedle()
     needleTransform->PostMultiply();
     needleTransform->Concatenate(this->dataRepository->needleToWebcam);
     needleTransform->Concatenate(calibTransform);
-    needleTransform->Concatenate(calibTransform2);
-    this->needle->SetUserTransform(needleTransform);
+    needleTransform->Concatenate(calibTransform2);*/
+    this->needle->SetUserMatrix(this->dataRepository->needleToWebcam);
 }
 void VisualizationController::EditMeshColour(int r, int g, int b)
 {

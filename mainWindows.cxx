@@ -194,10 +194,10 @@ void basic_QtVTK::SetupQTObjects()
     connect(trackerButton, SIGNAL(toggled(bool)), this, SLOT(StartTracker(bool)));
     connect(pivotButton, SIGNAL(toggled(bool)), this, SLOT(StylusCalibration(bool)));
     connect(actionLoad_Fiducial, SIGNAL(triggered()), this, SLOT(LoadFiducialPts()));
-    connect(resetPhantomPtButton, SIGNAL(clicked()), this, SLOT(ResetPhantomCollectedPoints()));
-    connect(deleteOnePhantomPtButton, SIGNAL(clicked()), this, SLOT(DeleteOnePhantomCollectedPoints()));
-    connect(phantomRegistrationButton, SIGNAL(clicked()), this, SLOT(PerformPhantomRegistration()));
-    connect(collectSinglePtButton, SIGNAL(clicked()), this, SLOT(CollectSinglePointPhantom()));
+    //connect(resetPhantomPtButton, SIGNAL(clicked()), this, SLOT(ResetPhantomCollectedPoints()));
+    //connect(deleteOnePhantomPtButton, SIGNAL(clicked()), this, SLOT(DeleteOnePhantomCollectedPoints()));
+    //connect(phantomRegistrationButton, SIGNAL(clicked()), this, SLOT(PerformPhantomRegistration()));
+    //connect(collectSinglePtButton, SIGNAL(clicked()), this, SLOT(CollectSinglePointPhantom()));
     connect(fluoroButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToFluoro(bool)));
     connect(bonesButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToBones(bool)));
     connect(xRayButton, SIGNAL(toggled(bool)), this, SLOT(ChangeToXray(bool)));
@@ -209,7 +209,7 @@ void basic_QtVTK::SetupQTObjects()
 
     // QPlusDeviceSetSelectorWidget
     deviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
-    deviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
+    deviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("Config"));
     deviceSetSelectorWidget->SetConnectButtonText("Load Phantom");
     deviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
     deviceSetSelectorWidget->setMaximumWidth(200);
@@ -218,7 +218,7 @@ void basic_QtVTK::SetupQTObjects()
     this->deviceSetSelectorWidget->setMaximumHeight(200);
 
     // Add start Tracker button just below this widget
-    verticalLayout_4->addLayout(this->horizontalLayout_2);
+    //verticalLayout_4->addLayout(this->horizontalLayout_2);
     //verticalLayout_4->addWidget(this->trackerButton);
     //verticalLayout_4->addWidget(this->loadingLabel);
     //verticalLayout_4->addWidget(this->loadingLabel);
@@ -232,7 +232,7 @@ void basic_QtVTK::SetupQTObjects()
 // Read config file and connect to devices
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
-    this->deleteOnePhantomPtButton->setText("ASD1");
+    //this->deleteOnePhantomPtButton->setText("ASD1");
     this->trackerWidget->update();
     this->deviceSetSelectorWidget->SetConnectButtonText("Loading");
     this->trackerButton->setDisabled(false);
@@ -435,7 +435,7 @@ void basic_QtVTK::ResetPhantomCollectedPoints()
 // Delete the last collected point
 void basic_QtVTK::DeleteOnePhantomCollectedPoints()
 {
-    this->deleteOnePhantomPtButton->setText("ASD");
+    //this->deleteOnePhantomPtButton->setText("ASD");
     LOG_INFO("delete");
 }
 

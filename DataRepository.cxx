@@ -115,13 +115,13 @@ void DataRepository::StartDataCollection()
 
     this->myAccelerometer2 = dynamic_cast<vtkPlusWitMotionTracker*>(accelerometer2Device);
 
-    if (dataCollector->GetDevice(webcamDevice, "WebcamDevice") != PLUS_SUCCESS)
+    /*if (dataCollector->GetDevice(webcamDevice, "WebcamDevice") != PLUS_SUCCESS)
     {
         LOG_ERROR("Unable to locate the device with ID = \"WebcamDevice\". Check config file.");
         exit;
     }
 
-    this->myWebcam = dynamic_cast<vtkPlusOpticalMarkerTracker*>(webcamDevice);
+    this->myWebcam = dynamic_cast<vtkPlusOpticalMarkerTracker*>(webcamDevice);*/
 
     // Get Mixer
     if (dataCollector->GetDevice(mixerDevice, "TrackedVideoDevice") != PLUS_SUCCESS)
@@ -177,9 +177,9 @@ void DataRepository::GetTransforms()
         LOG_ERROR("Failed to get accelerometer2ToTracker transform");
         exit;
     }
-    if (this->transformRepository->GetTransform(needleToWebcamName, needleToWebcam, &isValid) != PLUS_SUCCESS)
+    /*if (this->transformRepository->GetTransform(needleToWebcamName, needleToWebcam, &isValid) != PLUS_SUCCESS)
     {
         LOG_ERROR("Failed to get Marker0ToWebcam transform");
         exit;
-    }
+    }*/
 }

@@ -1,0 +1,98 @@
+<PlusConfiguration version="2.1">
+	
+		
+   <Volume
+	Id="CTVolume"
+	Path="Volumes/anon-meta cropped3.mha" >
+   </Volume>
+   <Volume
+	Id="SurfaceMesh"
+	Path="Volumes/HeartPhantomModel.vtk"
+	Matrix= "1 0 0 175
+			 0 1 0 150
+			 0 0 1 50
+			 0 0 0 1">
+					 
+   </Volume>
+   
+  <DataCollection StartupDelaySec="1.0">
+    <DeviceSet 
+      Name="Heart" 
+      Description="C-arm Simulator: Heart Module"
+    />
+	
+	<Device 
+      Id="TrackerDevice"
+      Type="WitMotionTracker"
+      SerialPort="6"
+      BaudRate="115200"
+      ToolReferenceFrame="Tracker" >
+      <DataSources>
+        <DataSource Type="Tool" Id="Accel" PortName="OrientationSensor" />
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="TrackerChannel">
+          <DataSource Id="Accel"/>
+        </OutputChannel>
+      </OutputChannels>
+    </Device>
+	
+	<Device 
+      Id="TrackerDevice2"
+      Type="WitMotionTracker"
+      SerialPort="9"
+      BaudRate="115200"
+      ToolReferenceFrame="Tracker2" >
+      <DataSources>
+        <DataSource Type="Tool" Id="Accel" PortName="OrientationSensor" />
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="TrackerChannel2">
+          <DataSource Id="Accel"/>
+        </OutputChannel>
+      </OutputChannels>
+    </Device>  
+      
+    <Device
+      Id="CaptureDevice"
+      Type="VirtualCapture"
+      BaseFilename="RecordingTest.mha"
+      EnableCapturingOnStart="FALSE" >
+      <InputChannels>
+        <InputChannel Id="TrackerChannel" />
+      </InputChannels>
+    </Device>
+
+	<Device 
+      Id="TrackedVideoDevice" 
+      Type="VirtualMixer" >
+      <InputChannels>
+        <InputChannel Id="TrackerChannel" />
+        <InputChannel Id="TrackerChannel2" />
+      </InputChannels>      
+      <OutputChannels>
+        <OutputChannel Id="MergedChannel"/>
+      </OutputChannels>
+    </Device>
+	
+  </DataCollection>
+
+  <PlusOpenIGTLinkServer 
+    MaxNumberOfIgtlMessagesToSend="1" 
+    MaxTimeSpentWithProcessingMs="50" 
+    ListeningPort="18944" 
+    OutputChannelId="MergedChannel"
+    > 
+    <DefaultClientInfo> 
+      <MessageTypes> 
+        <Message Type="TRANSFORM" />
+      </MessageTypes>
+      <TransformNames> 
+        <Transform Name="AccelToTracker" />
+		<Transform Name="AccelToTracker2" />
+      </TransformNames>
+    </DefaultClientInfo>
+  </PlusOpenIGTLinkServer>
+
+
+</PlusConfiguration>

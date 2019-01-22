@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.9)
  
 PROJECT(Basic_QtVTKITK_PLUS)
 
-find_package(AIGS REQUIRED)
-INCLUDE(${AIGS_USE_FILE})
-
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
@@ -36,8 +33,6 @@ ${CXX_FILES} ${UISrcs} ${QT_WRAP})
 target_link_libraries(Basic_QtVTKITK_PLUS ${VTK_LIBRARIES} ${ITK_LIBRARIES}
 Qt5::Widgets
 vtkGUISupportQt
-vtktracking
-vtkndicapi
 vtkPlusServer
 PlusWidgets
 vtkPlusCommon

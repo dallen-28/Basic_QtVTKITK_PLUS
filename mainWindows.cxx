@@ -125,10 +125,6 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <chrono>
 #include <thread>
 
-// tracker
-#include <vtkNDITracker.h>
-#include <vtkTrackerTool.h>
-
 // QT includes
 #include <QColorDialog>
 #include <QDebug>
@@ -148,7 +144,7 @@ POSSIBILITY OF SUCH DAMAGES.
 basic_QtVTK::basic_QtVTK()
 {
     this->setupUi(this);
-    this->trackerWidget->hide();
+    this->trackerWidget->show();
 
     // Disable tracker button until Volume is loaded
     this->trackerButton->setDisabled(true);
@@ -210,7 +206,9 @@ void basic_QtVTK::SetupQTObjects()
 
     // QPlusDeviceSetSelectorWidget
     deviceSetSelectorWidget = new QPlusDeviceSetSelectorWidget(NULL);
-    deviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("C:\\d\\pb\\PlusLibData\\ConfigFiles"));
+
+    deviceSetSelectorWidget->SetConfigurationDirectory(QStringLiteral("ConfigFiles"));
+    deviceSetSelectorWidget->SetConfigurationFile("Spine.xml");
     deviceSetSelectorWidget->SetConnectButtonText("Load Phantom");
     deviceSetSelectorWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
     deviceSetSelectorWidget->setMaximumWidth(200);
@@ -225,7 +223,7 @@ void basic_QtVTK::SetupQTObjects()
 // Read config file and connect to devices
 void basic_QtVTK::ConnectToDevicesByConfigFile(std::string aConfigFile)
 {
-    this->deleteOnePhantomPtButton->setText("ASD1");
+    ;
     this->trackerWidget->update();
     this->deviceSetSelectorWidget->SetConnectButtonText("Loading");
     this->trackerButton->setDisabled(false);
@@ -265,7 +263,7 @@ void basic_QtVTK::StartTracker(bool checked)
         // create a QTimer
         trackerTimer = new QTimer(this);
         connect(trackerTimer, SIGNAL(timeout()), this, SLOT(UpdateTrackerInfo()));
-        trackerTimer->start(0);       
+        trackerTimer->start(0);
     }
     else
     {
@@ -330,9 +328,9 @@ void basic_QtVTK::LoadFiducialPts()
 {
     // fiducial is stored as lines of 3 floats
     /*QString fname = QFileDialog::getOpenFileName(this,
-        tr("Open fiducial file"),
-        QDir::currentPath(),
-        "PolyData File (*.xyz)");
+    tr("Open fiducial file"),
+    QDir::currentPath(),
+    "PolyData File (*.xyz)");
     vtkNew<vtkSimplePointsReader> reader;
     reader->SetFileName(fname.toStdString().c_str());
     reader->Update();
@@ -365,7 +363,7 @@ void basic_QtVTK::CreateTrackerLogo()
 
 void basic_QtVTK::ScreenShot()
 {
-  
+
 }
 
 // Edit the background colour of the surface mesh renderer

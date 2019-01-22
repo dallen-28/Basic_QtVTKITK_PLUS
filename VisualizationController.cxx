@@ -1,4 +1,5 @@
 #include "VisualizationController.h"
+#include <windows.h>
 
 template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
     vtkSmartPointer< PReader > reader =
@@ -12,14 +13,17 @@ template< class PReader > vtkPolyData *readAnPolyData(const char *fname) {
 // Initialize the VTK scene objects
 VisualizationController::VisualizationController()
 {
+    //char a[1000];
+    //GetCurrentDirectory(1000, a);
+    //printf("%s\n", a);
     this->surfaceMesh = vtkSmartPointer<vtkActor>::New();
     this->volume = vtkSmartPointer<vtkVolume>::New();
-    this->ren = vtkSmartPointer<vtkRenderer>::New();
+    //this->ren = vtkSmartPointer<vtkRenderer>::New();
     this->ren2 = vtkSmartPointer<vtkRenderer>::New();
     this->foregroundRenderer = vtkSmartPointer<vtkRenderer>::New();
     this->cameraTransform = vtkSmartPointer<vtkTransform>::New();
     this->camera2Transform = vtkSmartPointer<vtkTransform>::New();
-    
+
     // Set camera up direction to +x
     this->up[0] = 1.0;
     this->up[1] = 0.0;
@@ -29,7 +33,9 @@ VisualizationController::VisualizationController()
     vtkSmartPointer<vtkPNGReader> reader1 = vtkSmartPointer<vtkPNGReader>::New();
     imageViewer = vtkSmartPointer<vtkImageViewer2>::New();
     //reader1->SetFileName("Images\\FieldOfView.png");
-    reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
+
+    reader1->SetFileName("Images\\FieldOfView.png");
+    //reader1->SetFileName("C:\\users\\danie\\Documents\\FieldOfView.png");
     imageViewer->SetInputConnection(reader1->GetOutputPort());
     imageViewer->SetRenderer(this->foregroundRenderer);
     fieldOfViewCenter = 2500;
@@ -113,48 +119,34 @@ void VisualizationController::SetCamerasUsingWitMotionTracker()
     double *a = this->RotationMatrixToEulerAngles(this->dataRepository->accelerometer2ToTracker);
     a[1] = a[1] * 180 / M_PI;
 
-    this->cameraTransform->Identity();
-    this->cameraTransform->PostMultiply();
     this->camera2Transform->Identity();
     this->camera2Transform->PostMultiply();
-    
-    // Arbitrary distance to view Full 3D surface Mesh
-    this->cameraTransform->Translate(0, 0, 800);
-   
+
+
     // Radius of the C-ARM (Must figure out relation between real world CARM radius and VTK Coordinates)
     this->camera2Transform->Translate(0, 0, 800 - zoomFactor);
 
     // Rotate camera according to rotation matrix received from C-ARM accelerometer 
-    this->cameraTransform->Concatenate(this->dataRepository->accelerometerToTracker);
     this->camera2Transform->Concatenate(this->dataRepository->accelerometerToTracker);
 
     // Transformation between accelerometer and CT coordinate systems
-    this->cameraTransform->Concatenate(this->dataRepository->accelerometerToCT);
     this->camera2Transform->Concatenate(this->dataRepository->accelerometerToCT);
 
     // TO DO: Find out gear ratio
-    this->cameraTransform->Translate(0, 0, a[1]/2.0);
-    this->cameraTransform->Update();
-
-    this->camera2Transform->Translate(0, 0, a[1]/2.0);
+    this->camera2Transform->Translate(0, 0, a[1] / 2.0);
     this->camera2Transform->Update();
 
-    this->ren->GetActiveCamera()->SetPosition(cameraTransform->GetPosition());
-    this->ren->GetActiveCamera()->SetFocalPoint(0, 0, a[1]/2.0);
-    this->cameraTransform->MultiplyPoint(up, out);
-    this->ren->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
+    //this->cameraTransform->MultiplyPoint(up, out);
+
+    this->cameraTransform->MultiplyPoint(up, out);
     this->ren2->GetActiveCamera()->SetPosition(camera2Transform->GetPosition());
-    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1]/2.0);
+    this->ren2->GetActiveCamera()->SetFocalPoint(0, 0, a[1] / 2.0);
     this->ren2->GetActiveCamera()->SetViewUp(out[0], out[1], out[2]);
 
-    this->ren->ResetCameraClippingRange();
     this->ren2->ResetCameraClippingRange();
 
-    //this->ren2->GetActiveCamera()->SetClippingRange(100, 700);
-    //this->ren2->ResetCameraClippingRange(0.0, 0.1, 0.0, 0.1, 0.0, 0.0);
 
-    
     delete[] a;
 }
 void VisualizationController::EditMeshColour(int r, int g, int b)
@@ -163,7 +155,7 @@ void VisualizationController::EditMeshColour(int r, int g, int b)
 }
 void VisualizationController::LoadMesh(std::string id)
 {
-    
+
 
     // Get FileName from repository
     std::string fileName = this->dataRepository->GetVolumeFileNameFromId(id);
@@ -210,11 +202,6 @@ void VisualizationController::LoadMesh(std::string id)
     this->surfaceMesh->SetMapper(mapper);
     this->ren->AddActor(this->surfaceMesh);
 
-    // Center mesh
-    //this->surfaceMesh->SetOrientation(0, 0, 180);
-    //this->surfaceMesh->SetPosition(0, -35, -70);
-
-
     vtkMatrix4x4 *matr = this->dataRepository->GetMatrixFromId(id);
     this->surfaceMesh->SetUserMatrix(this->dataRepository->GetMatrixFromId(id));
 
@@ -231,20 +218,14 @@ void VisualizationController::LoadVolume(std::string fileName)
     vtkSmartPointer<vtkMetaImageReader> metaReader = vtkSmartPointer<vtkMetaImageReader>::New();
     metaReader->SetFileName(fileName.c_str());
     metaReader->Update();
+    double *a = metaReader->GetDataSpacing();
+    double *b = metaReader->GetPixelSpacing();
+    double c = metaReader->GetRescaleOffset();
+    printf("%f %f %f %f %f %f\n", a[1], a[2], a[3], b[0], b[1], b[2]);
     input = metaReader->GetOutput();
     reader = metaReader;
-    /*vtkNew<vtkExtractVOI> extract;
-    extract->SetInputData(input);
-    extract->SetVOI(0, 500, 0, 500, 100, 250); 
-    extract->Update();*/
-
-    //this->ren2->SetViewport(0.0, 1.0, 0.0, 1.0);
-    //input->SetDimensions(100, 100, 100);
-    //input->SetSpacing(1.35599548, 1.35599548, 2.18399272);
-    //input->SetExtent(0, 200, 0, 200, 0, 200);
 
 
-    //this->volumeMapper->SetInputConnection(reader->GetOutputPort());
 
     this->volumeMapper->SetInputData(input);
     //this->volumeMapper->SetInputConnection(extract->GetOutputPort());
@@ -274,45 +255,18 @@ void VisualizationController::LoadVolume(std::string fileName)
     foregroundRenderer->InteractiveOff();
 }
 
-// Return an int array of point Id's which belong to a certain label
-void VisualizationController::GetSegmentationPoints(std::string name, double label)
-{
-    std::string fileName = this->dataRepository->GetVolumeFileNameFromId(name);
-
-    vtkAlgorithm *reader = nullptr;
-    vtkImageData *input = nullptr;
-    vtkPointData *pDat = nullptr;
-    vtkDataArray *dArr = nullptr;
-
-    // Store the point id's corresponding to label
-    double pointLabelValue;
-
-    vtkSmartPointer<vtkMetaImageReader> metaReader = vtkSmartPointer<vtkMetaImageReader>::New();
-    metaReader->SetFileName(fileName.c_str());
-    metaReader->Update();
-    input = metaReader->GetOutput();
-    reader = metaReader;
-
-    pDat = input->GetPointData();
-    dArr = pDat->GetScalars(); 
-
-    // Iterate through all points in the imageData
-    for (int i = 0; i < 1000000; i++)
-    {
-        pointLabelValue = dArr->GetVariantValue(i).ToDouble();
-
-        if (pointLabelValue == label)
-        {
-            ids->InsertNextTuple1(i);
-        }
-    }
-}
 void VisualizationController::Zoom(int value)
 {
-    this->zoomFactor = 10*value;
+    this->zoomFactor = 10 * value;
 }
 void VisualizationController::ZoomFOV(int value)
 {
+    // Limit size to 500
+    if (value >= 72)
+    {
+        value = 72;
+    }
+
     // Move the camera closer to the Field of View in order to increase the apparent size
     this->foregroundRenderer->GetActiveCamera()->SetPosition(fieldOfViewCenter, fieldOfViewCenter, 7500 - value * 100);
 
@@ -321,8 +275,6 @@ void VisualizationController::ZoomFOV(int value)
     double ymax = percentage;
     double xmin = 1 - percentage;
     double ymin = 1 - percentage;
-
-    ren2->SetViewport(xmin, ymin, xmax, ymax);
 
 
     this->foregroundRenderer->ResetCameraClippingRange();
